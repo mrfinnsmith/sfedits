@@ -5,25 +5,24 @@
   "license": "CC0-1.0",
   "version": "0.1.2",
   "dependencies": {
+    "@atproto/api": "^0.11.2",
     "async": "^2.6.3",
-    "ip-address": "^5.9.4",
     "mastodon": "^1.1.1",
-    "minimist": "^1.2.5",
+    "minimist": "^1.2.5", 
     "mustache": "2.3.0",
-    "puppeteer": "^5.3.0",
-    "wikichanges": "^0.2.9",
-    "@atproto/api": "^0.11.1"
+    "puppeteer": "^21.7.0",
+    "wikichanges": "^0.2.9"
   },
   "devDependencies": {
-    "mocha": "latest",
-    "chai": "latest"
+    "chai": "latest",
+    "mocha": "latest"
   },
   "engines": {
     "node": ">=6"
   },
   "scripts": {
     "test": "mocha --colors --reporter spec test.js",
-    "start": "node anon.js",
+    "start": "node page-watch.js",
     "mastodon": "node utils/mastodon.js"
   }
 }
