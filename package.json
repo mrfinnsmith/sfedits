@@ -1,6 +1,6 @@
 {
-  "name": "anon",
-  "description": "Tweet anonymous edits to Wikipedia from IP ranges.",
+  "name": "sfedits",
+  "description": "Post edits to San Francisco-related Wikipedia articles.",
   "homepage": "http://github.com/edsu/anon",
   "license": "CC0-1.0",
   "version": "0.1.2",
