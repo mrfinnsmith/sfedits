@@ -9,6 +9,7 @@ const Mustache             = require('mustache')
 const puppeteer            = require('puppeteer')
 const {WikiChanges}        = require('wikichanges')
 const {Address4, Address6} = require('ip-address')
+const { BskyAgent }        = require('@atproto/api')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
