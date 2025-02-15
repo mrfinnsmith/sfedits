@@ -17,51 +17,6 @@ const argv = minimist(process.argv.slice(2), {
   }
 })
 
-function address(ip) {
-  if (Array.from(ip).includes(':')) {
-    return new Address6(ip)
-  } else {
-    i = new Address4(ip)
-    const subnetMask = 96 + i.subnetMask
-    ip = `::ffff:${i.toGroup6()}/${subnetMask}`
-    return new Address6(ip)
-  }
-}
-
-function ipToInt(ip) {
-  return address(ip).bigInteger()
-}
-
-function compareIps(ip1, ip2) {
-  const r = ipToInt(ip1).compareTo(ipToInt(ip2))
-  if (r === 0) {
-    return 0
-  } else if (r > 0) {
-    return 1
-  } else {
-    return -1
-  }
-}
-
-function isIpInRange(ip, block) {
-  if (Array.isArray(block)) {
-    return (compareIps(ip, block[0]) >= 0) && (compareIps(ip, block[1]) <= 0)
-  } else {
-    const a = address(ip)
-    const b = address(block)
-    return a.isInSubnet(b)
-  }
-}
-
-function isIpInAnyRange(ip, blocks) {
-  for (let block of Array.from(blocks)) {
-    if (isIpInRange(ip, block)) {
-      return true
-    }
-  }
-  return false
-}
-
 function getConfig(path) {
   const config = loadJson(path)
   // see if ranges are externally referenced as a separate .json files
