@@ -140,6 +140,32 @@ async function sendStatus(account, status, edit) {
       )
     }
 
+    // Bluesky
+    if (account.bluesky) {
+      const agent = new BskyAgent({
+        service: account.bluesky.service || 'https://bsky.social'
+      })
+
+      await agent.login(account.bluesky)
+
+      const imageData = fs.readFileSync(screenshot)
+      const uploadResult = await agent.uploadBlob(imageData, {
+        encoding: 'image/png'
+      })
+
+      await agent.post({
+        text: status,
+        embed: {
+          $type: 'app.bsky.embed.images', 
+          images: [{
+            alt: `Screenshot of edit to ${edit.page}`,
+            image: uploadResult.data.blob
+          }]
+        },
+        createdAt: new Date().toISOString()
+      })
+    }
+
     // screenshot no longer needed
     fs.unlinkSync(screenshot)
   }
