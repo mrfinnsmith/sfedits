@@ -180,18 +180,10 @@ async function sendStatus(account, status, edit) {
 
 function inspect(account, edit) {
   if (edit.url) {
-    if (account.whitelist && account.whitelist[edit.wikipedia]
-        && account.whitelist[edit.wikipedia][edit.page]) {
-      status = getStatus(edit, edit.user, account.template)
+    if (account.watchlist && account.watchlist[edit.wikipedia]
+        && account.watchlist[edit.wikipedia][edit.page]) {
+      status = getStatus(edit, edit.user || 'anonymous', account.template)
       sendStatus(account, status, edit)
-    } else if (account.ranges && edit.anonymous) {
-      for (let name in account.ranges) {
-        const ranges = account.ranges[name]
-        if (isIpInAnyRange(edit.user, ranges)) {
-          status = getStatus(edit, name, account.template)
-          sendStatus(account, status, edit)
-        }
-      }
     }
   }
 }
