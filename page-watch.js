@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const fs                   = require('fs')
-const Twit                 = require('twit')
 const async                = require('async')
 const minimist             = require('minimist')
 const Mastodon             = require('mastodon')
