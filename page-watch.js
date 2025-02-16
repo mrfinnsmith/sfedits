@@ -39,16 +39,10 @@ function loadJson(path) {
 }
 
 function getStatus(edit, name, template) {
-  let page = edit.page
-  const len = getStatusLength(edit, name, template)
-  if (len > 280) {
-    const newLength = edit.page.length - (len - 279)
-    page = edit.page.slice(0, +newLength + 1 || undefined)
-  }
   return Mustache.render(template, {
     name,
     url: edit.url,
-    page
+    page: edit.page
   })
 }
 
