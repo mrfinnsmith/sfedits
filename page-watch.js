@@ -174,7 +174,7 @@ function inspect(account, edit) {
   if (edit.url) {
     if (account.watchlist && account.watchlist[edit.wikipedia]
         && account.watchlist[edit.wikipedia][edit.page]) {
-      status = getStatus(edit, edit.user || 'anonymous', account.template)
+      const status = getStatus(edit, edit.user, account.template)
       sendStatus(account, status, edit)
     }
   }
