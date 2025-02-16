@@ -182,7 +182,7 @@ function inspect(account, edit) {
 
 function checkConfig(config, error) {
   if (config.accounts) {
-    return async.each(config.accounts, canTweet, error)
+    return async.each(config.accounts, (account, callback) => callback(), error)
   } else {
     return error("missing accounts stanza in config")
   }
