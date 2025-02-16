@@ -48,14 +48,6 @@ function getStatus(edit, name, template) {
 
 const lastChange = {}
 
-function isRepeat(edit) {
-  const k = `${edit.wikipedia}`
-  const v = `${edit.page}:${edit.user}`
-  const r = lastChange[k] === v
-  lastChange[k] = v
-  return r
-}
-
 async function takeScreenshot(url) {
 
   // write the screenshot to this file
@@ -100,31 +92,9 @@ async function takeScreenshot(url) {
 async function sendStatus(account, status, edit) {
   console.log(status)
 
-  if (!argv.noop && (!account.throttle || !isRepeat(edit))) {
-
-    // wait a couple seconds and get a screenshot of the diff
+  if (!argv.noop) {
     await new Promise(r => setTimeout(r, 2000));  
     const screenshot = await takeScreenshot(edit.url)
-
-    // Mastodon
-    if (account.mastodon) {
-      const mastodon = new Mastodon(account.mastodon)
-      const response = await mastodon.post('media', {file: fs.createReadStream(screenshot)})
-      if (!response.data.id) {
-        console.log('error uploading screenshot to mastodon')
-        return
-      }
-
-      await mastodon.post(
-        'statuses', 
-        {'status': status, media_ids: [response.data.id]},
-        err => {
-          if (err) {
-            console.log(`mastodon post failed: ${err}`)
-          }
-        }
-      )
-    }
 
     // Bluesky
     if (account.bluesky) {
@@ -152,7 +122,6 @@ async function sendStatus(account, status, edit) {
       })
     }
 
-    // screenshot no longer needed
     fs.unlinkSync(screenshot)
   }
 }
