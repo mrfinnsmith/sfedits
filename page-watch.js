@@ -212,11 +212,6 @@ if (require.main === module) {
 
 module.exports = {
   main,
-  address,
-  ipToInt,
-  compareIps,
-  isIpInRange,
-  isIpInAnyRange,
   getConfig,
   getStatus,
   takeScreenshot
