@@ -38,13 +38,6 @@ function loadJson(path) {
   return require(path)
 }
 
-function getStatusLength(edit, name, template) {
-  // https://support.twitter.com/articles/78124-posting-links-in-a-tweet
-  const fakeUrl = 'https://t.co/BzHLWr31Ce'
-  const status = Mustache.render(template, {name, url: fakeUrl, page: edit.page})
-  return status.length
-}
-
 function getStatus(edit, name, template) {
   let page = edit.page
   const len = getStatusLength(edit, name, template)
