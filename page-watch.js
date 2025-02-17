@@ -54,20 +54,20 @@ async function takeScreenshot(url) {
   const filename = Date.now() + '.png'
 
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox'],
-    headless: true,
-    defaultViewport: {
-      width: 1024,
-      height: 768,
-    }
-  })
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage'
+    ]
+  });  
 
   const page = await browser.newPage()
   await page.goto(url, {waitUntil: 'networkidle0'})
 
   // get the diff portion of the page
   const box = await page.evaluate(() => {
-    const element = document.querySelector('table.diff.diff-contentalign-left')
+    const element = document.querySelector('table.diff.diff-type-table.diff-contentalign-left')
     // need to unpack values because DOMRect object isn't returnable
     const {x, y, width, height} = element.getBoundingClientRect()
     return {x, y, width, height}
@@ -90,39 +90,44 @@ async function takeScreenshot(url) {
 }
 
 async function sendStatus(account, status, edit) {
-  console.log(status)
+  try {
+    console.log(status)
 
-  if (!argv.noop) {
-    await new Promise(r => setTimeout(r, 2000));  
-    const screenshot = await takeScreenshot(edit.url)
+    if (!argv.noop) {
+      await new Promise(r => setTimeout(r, 2000));
+      const screenshot = await takeScreenshot(edit.url)
 
-    // Bluesky
-    if (account.bluesky) {
-      const agent = new BskyAgent({
-        service: account.bluesky.service || 'https://bsky.social'
-      })
+      // Bluesky
+      if (account.bluesky) {
+        const agent = new BskyAgent({
+          service: account.bluesky.service || 'https://bsky.social'
+        })
 
-      await agent.login(account.bluesky)
+        await agent.login(account.bluesky)
 
-      const imageData = fs.readFileSync(screenshot)
-      const uploadResult = await agent.uploadBlob(imageData, {
-        encoding: 'image/png'
-      })
+        const imageData = fs.readFileSync(screenshot)
+        const uploadResult = await agent.uploadBlob(imageData, {
+          encoding: 'image/png'
+        })
 
-      await agent.post({
-        text: status,
-        embed: {
-          $type: 'app.bsky.embed.images', 
-          images: [{
-            alt: `Screenshot of edit to ${edit.page}`,
-            image: uploadResult.data.blob
-          }]
-        },
-        createdAt: new Date().toISOString()
-      })
+        await agent.post({
+          text: status,
+          embed: {
+            $type: 'app.bsky.embed.images', 
+            images: [{
+              alt: `Screenshot of edit to ${edit.page}`,
+              image: uploadResult.data.blob
+            }]
+          },
+          createdAt: new Date().toISOString()
+        })
+      }
+
+      fs.unlinkSync(screenshot)
     }
-
-    fs.unlinkSync(screenshot)
+  } catch (error) {
+    console.error('Posting failed:', error)
+    throw error // Preserve stack trace
   }
 }
 
