@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-const fs                   = require('fs')
-const async                = require('async')
-const minimist             = require('minimist')
-const Mastodon             = require('mastodon')
-const Mustache             = require('mustache')
-const puppeteer            = require('puppeteer')
-const {WikiChanges}        = require('wikichanges')
-const {Address4, Address6} = require('ip-address')
-const { BskyAgent }        = require('@atproto/api')
+const fs = require('fs')
+const async = require('async')
+const minimist = require('minimist')
+const Mastodon = require('mastodon')
+const Mustache = require('mustache')
+const puppeteer = require('puppeteer')
+const { WikiChanges } = require('wikichanges')
+const { Address4, Address6 } = require('ip-address')
+const { BskyAgent } = require('@atproto/api')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -60,30 +60,20 @@ async function takeScreenshot(url) {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage'
     ]
-  });  
+  });
 
   const page = await browser.newPage()
-  await page.goto(url, {waitUntil: 'networkidle0'})
+  await page.setViewport({ width: 1200, height: 800 })
+  await page.goto(url, { waitUntil: 'networkidle0' })
 
   // get the diff portion of the page
-  const box = await page.evaluate(() => {
-    const element = document.querySelector('table.diff.diff-type-table.diff-contentalign-left')
-    // need to unpack values because DOMRect object isn't returnable
-    const {x, y, width, height} = element.getBoundingClientRect()
-    return {x, y, width, height}
-  })
+  const element = await page.$('table.diff.diff-type-table.diff-contentalign-left');
+  const box = await element.boundingBox();
 
-  // resize viewport in case the diff element isn't fully visible
-  await page.setViewport({
-    width: 1024,
-    height: parseInt(box.y + box.height + 20)
-  })
-
-  // take the screenshot!
   await page.screenshot({
     path: filename,
     clip: box
-  })
+  });
 
   await browser.close()
   return filename
@@ -113,7 +103,7 @@ async function sendStatus(account, status, edit) {
         await agent.post({
           text: status,
           embed: {
-            $type: 'app.bsky.embed.images', 
+            $type: 'app.bsky.embed.images',
             images: [{
               alt: `Screenshot of edit to ${edit.page}`,
               image: uploadResult.data.blob
@@ -134,7 +124,7 @@ async function sendStatus(account, status, edit) {
 function inspect(account, edit) {
   if (edit.url) {
     if (account.watchlist && account.watchlist[edit.wikipedia]
-        && account.watchlist[edit.wikipedia][edit.page]) {
+      && account.watchlist[edit.wikipedia][edit.page]) {
       const status = getStatus(edit, edit.user, account.template)
       sendStatus(account, status, edit)
     }
@@ -151,9 +141,9 @@ function checkConfig(config, error) {
 
 function main() {
   const config = getConfig(argv.config)
-  return checkConfig(config, function(err) {
+  return checkConfig(config, function (err) {
     if (!err) {
-      const wikipedia = new WikiChanges({ircNickname: config.nick})
+      const wikipedia = new WikiChanges({ ircNickname: config.nick })
       return wikipedia.listen(edit => {
         if (argv.verbose) {
           console.log(JSON.stringify(edit))
