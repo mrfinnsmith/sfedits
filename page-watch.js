@@ -54,13 +54,18 @@ async function takeScreenshot(url) {
   const filename = Date.now() + '.png'
 
   const browser = await puppeteer.launch({
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage'
-    ]
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--single-process',
+      '--no-zygote',
+      '--font-render-hinting=none'
+    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
   });
+
 
   const page = await browser.newPage()
   await page.setViewport({ width: 1200, height: 800 })
@@ -165,5 +170,7 @@ module.exports = {
   main,
   getConfig,
   getStatus,
-  takeScreenshot
+  takeScreenshot,
+  inspect,
+  sendStatus
 }
