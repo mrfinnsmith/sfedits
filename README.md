@@ -127,6 +127,24 @@ This script:
 - Helps identify common category patterns (e.g., "San Francisco Board of Supervisors members")
 - Useful for expanding monitoring to other language Wikipedias
 
+### `scripts/find-articles-in-categories.js`
+
+Finds all Wikipedia articles within specified categories. Can be used standalone or piped from the category finder to discover related articles.
+
+```bash
+# Use with specific categories
+node scripts/find-articles-in-categories.js "Mayors of San Francisco" "California politicians"
+
+# Pipe from category finder to discover articles in all found categories
+node scripts/find-categories.js | node scripts/find-articles-in-categories.js
+```
+
+This script:
+- Takes category names as input and finds all articles in those categories
+- Supports piping from find-categories.js output
+- Useful for discovering related political figures to add to your watchlist
+- Provides summary of unique articles across all categories
+
 ## License
 
 CC0 - Public Domain
