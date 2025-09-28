@@ -112,6 +112,21 @@ node page-watch.js --noop   # Test without posting
 node page-watch.js --verbose # Show all edit activity
 ```
 
+## Scripts
+
+### `scripts/find-categories.js`
+
+Analyzes Wikipedia categories for all articles in your config to help identify patterns for finding equivalent articles across different language Wikipedias.
+
+```bash
+node scripts/find-categories.js
+```
+
+This script:
+- Fetches categories for each article in your English Wikipedia watchlist
+- Helps identify common category patterns (e.g., "San Francisco Board of Supervisors members")
+- Useful for expanding monitoring to other language Wikipedias
+
 ## License
 
 CC0 - Public Domain
