@@ -125,7 +125,7 @@ async function sendStatus(account, status, edit) {
           api_url: account.mastodon.instance + '/api/v1/'
         })
 
-        const imageData = fs.readFileSync(screenshot)
+        const imageData = fs.createReadStream(screenshot)
         const mediaData = await M.post('media', {
           file: imageData,
           description: `Screenshot of edit to ${edit.page}`
