@@ -1,6 +1,6 @@
 # SF Edits
 
-A Wikipedia edit monitoring bot that watches for anonymous edits to San Francisco-related articles and posts screenshots to Bluesky.
+A Wikipedia edit monitoring bot that watches for anonymous edits to San Francisco-related articles and posts screenshots to Bluesky and Mastodon.
 
 Based on [anon](https://github.com/edsu/anon), originally created for @congressedits.
 
@@ -9,7 +9,7 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 1. Connects to Wikipedia's IRC feed to monitor real-time edits
 2. Watches for edits to configured SF-related articles
 3. Takes screenshots of the diff using Puppeteer
-4. Posts to Bluesky with the screenshot
+4. Posts to Bluesky and Mastodon with the screenshot
 
 ## Quick Start
 
@@ -20,7 +20,7 @@ git clone https://github.com/mrfinnsmith/sfedits.git
 cd sfedits
 npm install
 cp config.json.template config.json
-# Edit config.json with your Bluesky credentials and watchlist
+# Edit config.json with your Bluesky/Mastodon credentials and watchlist
 node page-watch.js --noop  # Test mode - doesn't post
 ```
 
@@ -44,7 +44,7 @@ docker build -t sfedits .
 3. **Configure:**
 ```bash
 cp config.json.template config.json
-vi config.json  # Add your Bluesky credentials and watchlist
+vi config.json  # Add your Bluesky/Mastodon credentials and watchlist
 ```
 
 4. **Run:**
@@ -96,12 +96,28 @@ Create `config.json` from the template:
     "bluesky": {
       "identifier": "your-username.bsky.social",
       "password": "your-app-password"
+    },
+    "mastodon": {
+      "instance": "https://your-instance.social",
+      "access_token": "your-access-token"
     }
   }]
 }
 ```
 
 **Important:** Never commit `config.json` - it contains credentials and is gitignored. Update it directly on the droplet when you need to change the watchlist or credentials.
+
+### Mastodon Setup
+
+To set up Mastodon posting, you need to create an application on your Mastodon instance:
+
+1. Go to your Mastodon instance's settings → Development → New Application
+2. **Critical:** When selecting scopes, choose:
+   - `write:media` - upload media files
+   - `write:statuses` - publish posts
+3. Copy the access token to your config.json
+
+**Note:** Without the correct scopes (`write:media` and `write:statuses`), Mastodon posting will fail silently while Bluesky continues to work.
 
 ## Monitored Articles
 
