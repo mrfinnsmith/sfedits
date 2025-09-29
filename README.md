@@ -44,7 +44,7 @@ docker build -t sfedits .
 3. **Configure:**
 ```bash
 cp config.json.template config.json
-nano config.json  # Add your Bluesky credentials and watchlist
+vi config.json  # Add your Bluesky credentials and watchlist
 ```
 
 4. **Run:**
@@ -67,7 +67,16 @@ docker logs -f sfedits-bot
 docker stop sfedits-bot
 docker start sfedits-bot
 docker restart sfedits-bot
+
+# Update config and restart
+vi config.json
+docker restart sfedits-bot
+
+# Check restart policy (should show "unless-stopped")
+docker inspect sfedits-bot | grep -A 3 RestartPolicy
 ```
+
+**Note:** The container is configured with `--restart unless-stopped` so it will automatically restart if interrupted or if the server reboots.
 
 ## Configuration
 
