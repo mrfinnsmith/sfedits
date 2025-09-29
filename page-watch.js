@@ -118,6 +118,25 @@ async function sendStatus(account, status, edit) {
         })
       }
 
+      // Mastodon
+      if (account.mastodon) {
+        const M = new Mastodon({
+          access_token: account.mastodon.access_token,
+          api_url: account.mastodon.instance + '/api/v1/'
+        })
+
+        const imageData = fs.readFileSync(screenshot)
+        const mediaData = await M.post('media', {
+          file: imageData,
+          description: `Screenshot of edit to ${edit.page}`
+        })
+
+        await M.post('statuses', {
+          status: status,
+          media_ids: [mediaData.data.id]
+        })
+      }
+
       fs.unlinkSync(screenshot)
     }
   } catch (error) {
