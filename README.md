@@ -105,13 +105,19 @@ Create `config.json` from the template:
 
 ## Monitored Articles
 
-Currently watching edits to SF politicians and government:
-- SF Board of Supervisors members
-- SF Mayor and officials  
-- SF Police/Sheriff departments
-- CA legislators representing SF
+Currently configured to monitor SF political figures across **10 language Wikipedias**:
+- **English**: SF Board of Supervisors, mayors, city officials, state legislators
+- **Arabic, Chinese, French, German, Italian, Japanese, Korean, Portuguese, Russian, Spanish**: Translations of major political figures
 
-Add/remove articles in the `watchlist` section of your config.
+The config includes:
+- Current and recent SF mayors (Breed, Newsom, Lee, etc.)
+- All current Board of Supervisors members
+- Key city officials (DA, Sheriff, Police Commission)
+- Major historical figures (Feinstein, Moscone, Willie Brown)
+- State/federal legislators (Pelosi, Wiener, Harris)
+- Corruption scandals and investigations
+
+Use the translation scripts to expand to additional languages or discover new articles to monitor.
 
 ## Development
 
@@ -153,6 +159,20 @@ This script:
 - Supports piping from find-categories.js output
 - Useful for discovering related political figures to add to your watchlist
 - Provides summary of unique articles across all categories
+
+### `scripts/find-translations.js`
+
+Finds all Wikipedia language translations for articles in your config. Helps discover equivalent articles across different language Wikipedias.
+
+```bash
+node scripts/find-translations.js
+```
+
+This script:
+- Analyzes all articles in your current config
+- Finds translations in other language Wikipedias
+- Shows language codes and translated article titles
+- Useful for expanding monitoring to multiple language Wikipedias
 
 ## License
 
