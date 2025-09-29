@@ -105,8 +105,30 @@ async function sendStatus(account, status, edit) {
           encoding: 'image/png'
         })
 
+        // Find URLs in the status text and create facets for them
+        const urlPattern = /https?:\/\/[^\s]+/g
+        const facets = []
+        let match
+        while ((match = urlPattern.exec(status)) !== null) {
+          const url = match[0]
+          const byteStart = Buffer.byteLength(status.substring(0, match.index), 'utf8')
+          const byteEnd = byteStart + Buffer.byteLength(url, 'utf8')
+          
+          facets.push({
+            index: {
+              byteStart: byteStart,
+              byteEnd: byteEnd
+            },
+            features: [{
+              $type: 'app.bsky.richtext.facet#link',
+              uri: url
+            }]
+          })
+        }
+
         await agent.post({
           text: status,
+          facets: facets,
           embed: {
             $type: 'app.bsky.embed.images',
             images: [{
