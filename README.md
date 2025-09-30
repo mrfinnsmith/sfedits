@@ -72,6 +72,9 @@ docker restart sfedits-bot
 vi config.json
 docker restart sfedits-bot
 
+# Deploy code changes (after git push from local)
+git pull && docker build -t sfedits . && docker stop sfedits-bot && docker rm sfedits-bot && docker run -d --restart unless-stopped --name sfedits-bot -v /root/sfedits/config.json:/opt/sfedits/config.json sfedits
+
 # Check restart policy (should show "unless-stopped")
 docker inspect sfedits-bot | grep -A 3 RestartPolicy
 ```
