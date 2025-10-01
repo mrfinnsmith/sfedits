@@ -2,3 +2,4 @@ config.json
 node_modules
 .claude/
 CLAUDE.md
+docs/pii-screening/
