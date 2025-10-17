@@ -81,6 +81,20 @@ docker inspect sfedits-bot | grep -A 3 RestartPolicy
 
 **Note:** The container is configured with `--restart unless-stopped` so it will automatically restart if interrupted or if the server reboots.
 
+## Maintenance
+
+**Automated systems in place:**
+- Weekly Docker cleanup (Sundays 3am) - removes unused images/containers older than 7 days
+- Docker logs capped at 50MB per container
+- System logs capped at 500MB
+- Email alerts at 75% disk usage via Digital Ocean monitoring
+
+**Manual disk check:**
+```bash
+df -h /                # Overall disk usage
+docker system df       # Docker-specific usage
+```
+
 ## Configuration
 
 Create `config.json` from the template:
