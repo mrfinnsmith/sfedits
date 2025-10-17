@@ -66,22 +66,25 @@ async function takeScreenshot(url) {
     executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
   });
 
+  try {
+    const page = await browser.newPage()
+    await page.setViewport({ width: 1200, height: 800 })
+    await page.goto(url, { waitUntil: 'networkidle0' })
 
-  const page = await browser.newPage()
-  await page.setViewport({ width: 1200, height: 800 })
-  await page.goto(url, { waitUntil: 'networkidle0' })
+    // get the diff portion of the page
+    const element = await page.$('table.diff.diff-type-table.diff-contentalign-left');
+    const box = await element.boundingBox();
 
-  // get the diff portion of the page
-  const element = await page.$('table.diff.diff-type-table.diff-contentalign-left');
-  const box = await element.boundingBox();
+    await page.screenshot({
+      path: filename,
+      clip: box
+    });
 
-  await page.screenshot({
-    path: filename,
-    clip: box
-  });
-
-  await browser.close()
-  return filename
+    return filename
+  } finally {
+    // Always close browser, even if there's an error
+    await browser.close()
+  }
 }
 
 async function sendStatus(account, status, edit) {
