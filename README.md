@@ -30,8 +30,11 @@ node page-watch.js --noop  # Test mode - doesn't post
 
 2. **Setup server:**
 ```bash
-# Add swap for Docker builds
+# Add swap for Docker builds and Puppeteer (REQUIRED for 512MB droplet)
 fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+
+# Make swap persistent across reboots
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
 # Install dependencies
 apt update && apt install -y docker.io git
