@@ -38,12 +38,102 @@ function loadJson(path) {
   return require(path)
 }
 
+// Builds Wikipedia article URL from edit URL. Returns null if URL is malformed.
+function getArticleUrl(editUrl, pageName) {
+  try {
+    const url = new URL(editUrl)
+    const lang = url.hostname.split('.')[0]
+    return `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(pageName)}`
+  } catch {
+    return null
+  }
+}
+
+// Builds Wikipedia contributions URL from edit URL. Returns null if URL is malformed.
+function getUserContributionsUrl(editUrl, username) {
+  try {
+    const url = new URL(editUrl)
+    const lang = url.hostname.split('.')[0]
+    return `https://${lang}.wikipedia.org/wiki/Special:Contributions/${encodeURIComponent(username)}`
+  } catch {
+    return null
+  }
+}
+
+// Creates Bluesky facets for article name, username, and diff URL
+function buildFacets(text, page, name, pageUrl, userUrl) {
+  const facets = []
+  let searchOffset = 0
+
+  // Article name facet (appears first in template)
+  if (pageUrl) {
+    const pageIndex = text.indexOf(page, searchOffset)
+    if (pageIndex !== -1) {
+      const byteStart = Buffer.byteLength(text.substring(0, pageIndex), 'utf8')
+      const byteEnd = byteStart + Buffer.byteLength(page, 'utf8')
+      facets.push({
+        index: { byteStart, byteEnd },
+        features: [{
+          $type: 'app.bsky.richtext.facet#link',
+          uri: pageUrl
+        }]
+      })
+      searchOffset = pageIndex + page.length
+    }
+  }
+
+  // Username facet (appears after page name in template)
+  if (userUrl) {
+    const nameIndex = text.indexOf(name, searchOffset)
+    if (nameIndex !== -1) {
+      const byteStart = Buffer.byteLength(text.substring(0, nameIndex), 'utf8')
+      const byteEnd = byteStart + Buffer.byteLength(name, 'utf8')
+      facets.push({
+        index: { byteStart, byteEnd },
+        features: [{
+          $type: 'app.bsky.richtext.facet#link',
+          uri: userUrl
+        }]
+      })
+    }
+  }
+
+  // Diff URL facet
+  const urlPattern = /https?:\/\/[^\s]+/g
+  let match
+  while ((match = urlPattern.exec(text)) !== null) {
+    const url = match[0]
+    const byteStart = Buffer.byteLength(text.substring(0, match.index), 'utf8')
+    const byteEnd = byteStart + Buffer.byteLength(url, 'utf8')
+    facets.push({
+      index: { byteStart, byteEnd },
+      features: [{
+        $type: 'app.bsky.richtext.facet#link',
+        uri: url
+      }]
+    })
+  }
+
+  return facets
+}
+
 function getStatus(edit, name, template) {
-  return Mustache.render(template, {
+  const pageUrl = getArticleUrl(edit.url, edit.page)
+  const userUrl = getUserContributionsUrl(edit.url, name)
+
+  const text = Mustache.render(template, {
     name,
     url: edit.url,
     page: edit.page
   })
+
+  return {
+    text,
+    pageUrl,
+    userUrl,
+    page: edit.page,
+    name
+  }
 }
 
 const lastChange = {}
@@ -87,9 +177,9 @@ async function takeScreenshot(url) {
   }
 }
 
-async function sendStatus(account, status, edit) {
+async function sendStatus(account, statusData, edit) {
   try {
-    console.log(status)
+    console.log(statusData.text)
 
     if (!argv.noop) {
       await new Promise(r => setTimeout(r, 2000));
@@ -108,29 +198,16 @@ async function sendStatus(account, status, edit) {
           encoding: 'image/png'
         })
 
-        // Find URLs in the status text and create facets for them
-        const urlPattern = /https?:\/\/[^\s]+/g
-        const facets = []
-        let match
-        while ((match = urlPattern.exec(status)) !== null) {
-          const url = match[0]
-          const byteStart = Buffer.byteLength(status.substring(0, match.index), 'utf8')
-          const byteEnd = byteStart + Buffer.byteLength(url, 'utf8')
-          
-          facets.push({
-            index: {
-              byteStart: byteStart,
-              byteEnd: byteEnd
-            },
-            features: [{
-              $type: 'app.bsky.richtext.facet#link',
-              uri: url
-            }]
-          })
-        }
+        const facets = buildFacets(
+          statusData.text,
+          statusData.page,
+          statusData.name,
+          statusData.pageUrl,
+          statusData.userUrl
+        )
 
         await agent.post({
-          text: status,
+          text: statusData.text,
           facets: facets,
           embed: {
             $type: 'app.bsky.embed.images',
@@ -157,7 +234,7 @@ async function sendStatus(account, status, edit) {
         })
 
         await M.post('statuses', {
-          status: status,
+          status: statusData.text,
           media_ids: [mediaData.data.id]
         })
       }
@@ -174,8 +251,8 @@ function inspect(account, edit) {
   if (edit.url) {
     if (account.watchlist && account.watchlist[edit.wikipedia]
       && account.watchlist[edit.wikipedia][edit.page]) {
-      const status = getStatus(edit, edit.user, account.template)
-      sendStatus(account, status, edit)
+      const statusData = getStatus(edit, edit.user, account.template)
+      sendStatus(account, statusData, edit)
     }
   }
 }
@@ -214,6 +291,9 @@ module.exports = {
   main,
   getConfig,
   getStatus,
+  getArticleUrl,
+  getUserContributionsUrl,
+  buildFacets,
   takeScreenshot,
   inspect,
   sendStatus
