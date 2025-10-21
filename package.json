@@ -5,7 +5,7 @@
   "license": "CC0-1.0",
   "version": "0.1.2",
   "dependencies": {
-    "@atproto/api": "^0.11.2",
+    "@atproto/api": "^0.17.3",
     "async": "^2.6.3",
     "mastodon": "^1.1.1",
     "minimist": "^1.2.5",
