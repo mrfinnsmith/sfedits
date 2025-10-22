@@ -209,7 +209,7 @@ function logBlockedEdit(edit, statusData, piiResult) {
  * Send DM alert via Bluesky
  * Uses api.bsky.chat service directly (not routed through bsky.social PDS)
  */
-async function sendBlueskyAlert(account, edit, statusData, piiResult) {
+async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot) {
   if (!account.pii_alerts?.bluesky_recipient) return
 
   try {
@@ -221,24 +221,21 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult) {
 
     const accessJwt = agent.session.accessJwt
 
-    // Build alert message
-    const entities = piiResult.entities
-      .map(e => `  - ${e.type}: '${e.text}' (score: ${e.score})`)
-      .join('\n')
+    // Upload screenshot
+    const imageData = fs.readFileSync(screenshot)
+    const uploadResult = await agent.uploadBlob(imageData, {
+      encoding: 'image/png'
+    })
 
-    const message = `🚫 PII DETECTED - Post blocked
-
-Article: ${edit.page}
-Editor: ${statusData.name}
-Diff: ${edit.url}
-
-Post text:
-${statusData.text}
-
-Detected PII:
-${entities}
-
-Review required. If this is a false positive, you can manually post from @sfedits.`
+    // Build facets for clickable links (same as regular post)
+    const alertText = `PII: ${statusData.text}`
+    const facets = buildFacets(
+      alertText,
+      statusData.page,
+      statusData.name,
+      statusData.pageUrl,
+      statusData.userUrl
+    )
 
     // Get conversation - chat API is at api.bsky.chat
     const convoResponse = await fetch('https://api.bsky.chat/xrpc/chat.bsky.convo.listConvos?limit=100', {
@@ -263,7 +260,7 @@ Review required. If this is a false positive, you can manually post from @sfedit
       return
     }
 
-    // Send message - chat API is at api.bsky.chat
+    // Send message with image - chat API is at api.bsky.chat
     await fetch('https://api.bsky.chat/xrpc/chat.bsky.convo.sendMessage', {
       method: 'POST',
       headers: {
@@ -272,7 +269,17 @@ Review required. If this is a false positive, you can manually post from @sfedit
       },
       body: JSON.stringify({
         convoId: convo.id,
-        message: { text: message }
+        message: {
+          text: alertText,
+          facets: facets,
+          embed: {
+            $type: 'app.bsky.embed.images',
+            images: [{
+              alt: `Screenshot of edit to ${edit.page}`,
+              image: uploadResult.data.blob
+            }]
+          }
+        }
       })
     })
 
@@ -285,7 +292,7 @@ Review required. If this is a false positive, you can manually post from @sfedit
 /**
  * Send DM alert via Mastodon
  */
-async function sendMastodonAlert(account, edit, statusData, piiResult) {
+async function sendMastodonAlert(account, edit, statusData, piiResult, screenshot) {
   if (!account.pii_alerts?.mastodon_recipient) return
 
   try {
@@ -294,26 +301,19 @@ async function sendMastodonAlert(account, edit, statusData, piiResult) {
       api_url: account.mastodon.instance + '/api/v1/'
     })
 
-    const entities = piiResult.entities
-      .map(e => `  - ${e.type}: '${e.text}' (score: ${e.score})`)
-      .join('\n')
+    // Upload screenshot
+    const imageData = fs.createReadStream(screenshot)
+    const mediaData = await M.post('media', {
+      file: imageData,
+      description: `Screenshot of edit to ${edit.page}`
+    })
 
-    const message = `🚫 PII DETECTED - Post blocked
-
-Article: ${edit.page}
-Editor: ${statusData.name}
-Diff: ${edit.url}
-
-Post text:
-${statusData.text}
-
-Detected PII:
-${entities}
-
-Review required. If this is a false positive, you can manually post from @sfedits.`
+    // Same message as regular post, just prefixed with "PII: "
+    const alertText = `PII: ${statusData.text}`
 
     await M.post('statuses', {
-      status: `@${account.pii_alerts.mastodon_recipient} ${message}`,
+      status: `@${account.pii_alerts.mastodon_recipient} ${alertText}`,
+      media_ids: [mediaData.data.id],
       visibility: 'direct'
     })
 
@@ -344,10 +344,17 @@ async function screenForPII(account, edit, statusData) {
       console.error(`   Article: ${edit.page}`)
       console.error(`   Detected: ${piiResult.entities.map(e => e.type).join(', ')}`)
 
+      // Take screenshot for alerts
+      await new Promise(r => setTimeout(r, 2000))
+      const screenshot = await takeScreenshot(edit.url)
+
       // Log, alert, and block
       logBlockedEdit(edit, statusData, piiResult)
-      await sendBlueskyAlert(account, edit, statusData, piiResult)
-      await sendMastodonAlert(account, edit, statusData, piiResult)
+      await sendBlueskyAlert(account, edit, statusData, piiResult, screenshot)
+      await sendMastodonAlert(account, edit, statusData, piiResult, screenshot)
+
+      // Clean up screenshot
+      fs.unlinkSync(screenshot)
 
       return { safe: false, reason: 'PII detected', piiResult }
     }
