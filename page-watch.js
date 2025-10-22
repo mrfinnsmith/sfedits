@@ -172,9 +172,11 @@ async function analyzeForPII(text) {
     const escapedText = text.replace(/'/g, "'\\''")
 
     // Call Python PII analyzer
+    // Timeout increased to 30s for resource-constrained environments
+    // (loading Presidio + spaCy models can take 15-20s on 512MB RAM)
     const result = execSync(`python3 pii-analyzer.py '${escapedText}'`, {
       encoding: 'utf8',
-      timeout: 10000
+      timeout: 30000
     })
 
     return JSON.parse(result)
