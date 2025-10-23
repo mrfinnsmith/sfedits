@@ -9,7 +9,6 @@ const puppeteer = require('puppeteer')
 const { WikiChanges } = require('wikichanges')
 const { Address4, Address6 } = require('ip-address')
 const { BskyAgent } = require('@atproto/api')
-const { execSync } = require('child_process')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
 
@@ -165,22 +164,22 @@ async function extractDiffText(diffUrl) {
 }
 
 /**
- * Analyze diff text for PII using Python Presidio module
+ * Analyze diff text for PII using PII microservice
  */
 async function analyzeForPII(text) {
   try {
-    // Escape text for shell execution
-    const escapedText = text.replace(/'/g, "'\\''")
-
-    // Call Python PII analyzer
-    // Timeout increased to 30s for resource-constrained environments
-    // (loading Presidio + spaCy models can take 15-20s on 512MB RAM)
-    const result = execSync(`python3 pii-analyzer.py '${escapedText}'`, {
-      encoding: 'utf8',
-      timeout: 30000
+    const response = await fetch('http://pii-service:5000/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(5000)
     })
 
-    return JSON.parse(result)
+    if (!response.ok) {
+      throw new Error(`PII service returned ${response.status}`)
+    }
+
+    return await response.json()
   } catch (error) {
     // On timeout/error, log but allow post through
     // Blocking every post on infrastructure issues defeats the purpose

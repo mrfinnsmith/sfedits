@@ -1,0 +1,28 @@
+services:
+  pii-service:
+    build: ./pii-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  bot:
+    build: .
+    depends_on:
+      pii-service:
+        condition: service_healthy
+    volumes:
+      - ./config.json:/opt/sfedits/config.json:ro
+      - ./drafts:/opt/sfedits/drafts
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 200M
