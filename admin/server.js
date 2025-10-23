@@ -19,7 +19,7 @@ const loginCodes = new Map() // code -> { created: Date, expires: Date }
 const CODE_DURATION = 10 * 60 * 1000 // 10 minutes
 
 // Import draft manager from parent directory
-const { listDrafts, getDraft, deleteDraft } = require('./lib/draft-manager')
+const { listDrafts, getDraft, deleteDraft, DRAFTS_DIR, SCREENSHOTS_DIR } = require('./lib/draft-manager')
 
 // Middleware
 app.use(express.json())
@@ -233,7 +233,7 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
     const config = loadConfig()
     const account = config.accounts[0]
 
-    const screenshotPath = path.join(__dirname, '..', draft.screenshot)
+    const screenshotPath = path.join(DRAFTS_DIR, 'screenshots', `${draft.id}.png`)
     const results = []
     const postedTo = draft.posted_to || []
 
@@ -315,7 +315,7 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
 
     // Update draft with posted platforms
     draft.posted_to = postedTo
-    const draftPath = path.join(__dirname, '..', 'drafts', `${draft.id}.json`)
+    const draftPath = path.join(DRAFTS_DIR, `${draft.id}.json`)
     fs.writeFileSync(draftPath, JSON.stringify(draft, null, 2))
 
     // Only delete draft if ALL configured platforms succeeded
@@ -366,7 +366,7 @@ app.delete('/api/drafts/:id', requireAuth, (req, res) => {
  * Serve screenshots (requires auth)
  */
 app.get('/screenshots/:filename', requireAuth, (req, res) => {
-  const screenshotPath = path.join(__dirname, '../drafts/screenshots', req.params.filename)
+  const screenshotPath = path.join(SCREENSHOTS_DIR, req.params.filename)
   if (fs.existsSync(screenshotPath)) {
     res.sendFile(screenshotPath)
   } else {
