@@ -31,9 +31,14 @@ def analyze():
         return jsonify({'error': 'Missing text field'}), 400
 
     text = data['text']
+    blocked_types = data.get('blocked_entity_types', None)
 
     # Analyze for PII - fast since model is already loaded
     results = analyzer.analyze(text=text, language='en')
+
+    # Filter results to only blocked entity types if specified
+    if blocked_types:
+        results = [r for r in results if r.entity_type in blocked_types]
 
     entities = [{
         'type': r.entity_type,

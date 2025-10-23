@@ -166,12 +166,17 @@ async function extractDiffText(diffUrl) {
 /**
  * Analyze diff text for PII using PII microservice
  */
-async function analyzeForPII(text) {
+async function analyzeForPII(text, blockedEntityTypes = null) {
   try {
+    const body = { text }
+    if (blockedEntityTypes) {
+      body.blocked_entity_types = blockedEntityTypes
+    }
+
     const response = await fetch('http://pii-service:5000/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(5000)
     })
 
@@ -332,6 +337,11 @@ async function sendMastodonAlert(account, edit, statusData, piiResult, screensho
  */
 async function screenForPII(account, edit, statusData) {
   try {
+    // Check if PII blocking is enabled
+    if (account.pii_blocking && !account.pii_blocking.enabled) {
+      return { safe: true }
+    }
+
     // Extract diff text from Wikipedia
     const diffText = await extractDiffText(edit.url)
 
@@ -340,8 +350,11 @@ async function screenForPII(account, edit, statusData) {
       return { safe: false, reason: 'Could not extract diff text' }
     }
 
+    // Get blocked entity types from config
+    const blockedTypes = account.pii_blocking?.blocked_entity_types || null
+
     // Analyze for PII
-    const piiResult = await analyzeForPII(diffText)
+    const piiResult = await analyzeForPII(diffText, blockedTypes)
 
     if (piiResult.has_pii) {
       console.error('🚫 PII DETECTED - Blocking post')
