@@ -212,19 +212,53 @@ The blocked edit is also logged to `pii-blocks.log` for SSH review.
 
 ### Admin Console for Draft Review
 
-When PII is detected, posts are blocked and saved as drafts for manual review. Access the admin console to review and approve drafts.
+When PII is detected, posts are blocked and saved as drafts. The admin console is a web UI for reviewing and posting drafts.
 
-**Access admin console:**
+**Deploy admin console (separate container):**
+
+```bash
+docker build -t sfedits-admin -f admin/Dockerfile . && \
+docker run -d \
+  --name sfedits-admin \
+  -p 3000:3000 \
+  -e CONFIG_PATH=/opt/sfedits-admin/config.json \
+  -v $(pwd)/config.json:/opt/sfedits-admin/config.json:ro \
+  -v $(pwd)/drafts:/opt/sfedits-admin/drafts \
+  --restart unless-stopped \
+  sfedits-admin
+```
+
+**Requirements:**
+- Bot's Bluesky app password must have "Allow access to your direct messages" enabled
+- Create a DM conversation between bot account and `pii_alerts.bluesky_recipient` (send one DM manually in Bluesky app)
+- `pii_alerts.bluesky_recipient` must be set in config.json
+- Port 3000 must be accessible
+
+**Access:**
 - URL: `http://your-droplet-ip:3000`
-- Authentication: Passwordless via Bluesky DM
-- Click "Send Code to Bluesky" → Check your DMs → Enter 6-digit code
+- Click "Send Code to Bluesky" → Check DMs → Enter 6-digit code
+- Session lasts 24 hours
+
+**Update admin code:**
+```bash
+git pull && \
+docker stop sfedits-admin && docker rm sfedits-admin && \
+docker build -t sfedits-admin -f admin/Dockerfile . && \
+docker run -d \
+  --name sfedits-admin \
+  -p 3000:3000 \
+  -e CONFIG_PATH=/opt/sfedits-admin/config.json \
+  -v $(pwd)/config.json:/opt/sfedits-admin/config.json:ro \
+  -v $(pwd)/drafts:/opt/sfedits-admin/drafts \
+  --restart unless-stopped \
+  sfedits-admin
+```
 
 **Features:**
-- View all blocked posts with screenshots
-- See what PII was detected and confidence scores
-- Clickable links showing exactly how the post will appear
-- One-click posting to both Bluesky and Mastodon
-- Automatic retry on partial failures (if one platform fails, retry posts only to failed platform)
+- Review blocked posts with screenshots
+- See detected PII types and confidence scores
+- Post to both platforms with one click
+- Automatic retry (if one platform fails, retry posts only to that platform)
 
 ### Fail-safe design
 
