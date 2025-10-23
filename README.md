@@ -1,15 +1,30 @@
 # SF Edits
 
-A Wikipedia edit monitoring bot that watches for anonymous edits to San Francisco-related articles and posts screenshots to Bluesky and Mastodon.
+A Wikipedia edit monitoring bot that watches for edits to San Francisco-related articles and posts screenshots to Bluesky and Mastodon with automated PII screening.
 
 Based on [anon](https://github.com/edsu/anon), originally created for @congressedits.
 
+## Architecture
+
+**Two-service microservice architecture:**
+
+1. **Bot service** (Node.js)
+   - Monitors Wikipedia IRC feed for real-time edits
+   - Watches configured SF-related articles
+   - Takes screenshots with Puppeteer
+   - Posts to Bluesky and Mastodon
+
+2. **PII service** (Python/Flask)
+   - Persistent analyzer with pre-loaded spaCy models
+   - Screens edits for personally identifiable information
+   - Responds in ~100-200ms via HTTP API
+
 ## How it works
 
-1. Connects to Wikipedia's IRC feed to monitor real-time edits
-2. Watches for edits to configured SF-related articles
-3. Takes screenshots of the diff using Puppeteer
-4. Posts to Bluesky and Mastodon with the screenshot
+1. Bot detects edit → Fetches diff from Wikipedia
+2. Sends diff text to PII service for analysis
+3. **If PII detected:** Block post, save draft, send DM alerts
+4. **If clean:** Take screenshot and post to both platforms
 
 ## Quick Start
 
@@ -30,18 +45,16 @@ node page-watch.js --noop  # Test mode - doesn't post
 
 2. **Setup server:**
 ```bash
-# Add swap for Docker builds and Puppeteer (REQUIRED for 512MB droplet)
+# Add swap for Puppeteer/Chrome (REQUIRED for 512MB droplet)
 fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
-
-# Make swap persistent across reboots
 echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
 # Install dependencies
-apt update && apt install -y docker.io git
+apt update && apt install -y docker.io docker-compose git
 
-# Clone and build
-git clone https://github.com/mrfinnsmith/sfedits.git && cd sfedits
-docker build -t sfedits .
+# Clone repo
+git clone https://github.com/mrfinnsmith/sfedits.git
+cd sfedits
 ```
 
 3. **Configure:**
@@ -50,39 +63,39 @@ cp config.json.template config.json
 vi config.json  # Add your Bluesky/Mastodon credentials and watchlist
 ```
 
-4. **Run:**
+4. **Deploy:**
 ```bash
-docker run -d --restart unless-stopped --name sfedits-bot \
-  -v /root/sfedits/config.json:/opt/sfedits/config.json sfedits
+docker-compose up -d
 ```
+
+The PII service will take ~20-30 seconds to load spaCy models on first start. The bot waits for the PII service to be healthy before starting.
 
 ## Management Commands
 
 ```bash
 # Check status
-docker ps
-docker logs sfedits-bot
+docker-compose ps
 
-# Follow logs in real-time
-docker logs -f sfedits-bot
+# View logs
+docker-compose logs -f          # Both services
+docker-compose logs -f bot      # Bot only
+docker-compose logs -f pii-service  # PII service only
 
-# Control bot
-docker stop sfedits-bot
-docker start sfedits-bot
-docker restart sfedits-bot
+# Control services
+docker-compose restart          # Restart both
+docker-compose restart bot      # Restart bot only
+docker-compose stop             # Stop all
+docker-compose down             # Stop and remove containers
 
 # Update config and restart
 vi config.json
-docker restart sfedits-bot
+docker-compose restart bot
 
-# Deploy code changes (after git push from local)
-git pull && docker build -t sfedits . && docker stop sfedits-bot && docker rm sfedits-bot && docker run -d --restart unless-stopped --name sfedits-bot -v /root/sfedits/config.json:/opt/sfedits/config.json sfedits
-
-# Check restart policy (should show "unless-stopped")
-docker inspect sfedits-bot | grep -A 3 RestartPolicy
+# Deploy code changes
+git pull && docker-compose down && docker system prune -af && docker-compose build && docker-compose up -d
 ```
 
-**Note:** The container is configured with `--restart unless-stopped` so it will automatically restart if interrupted or if the server reboots.
+**Note:** Services are configured with `restart: unless-stopped` so they automatically restart if interrupted or if the server reboots.
 
 ## Maintenance
 
@@ -159,16 +172,17 @@ The bot automatically screens all edits for personally identifiable information 
 
 ### How it works
 
-1. **Edit detected** → Bot fetches the Wikipedia diff HTML
-2. **Extract text** → Parses diff content from the HTML
-3. **Analyze for PII** → Uses Microsoft Presidio to detect:
+1. Bot fetches Wikipedia diff HTML and extracts text
+2. Sends text to PII microservice (Python/Flask with Microsoft Presidio)
+3. PII service analyzes for:
    - Email addresses
    - Phone numbers
    - Social Security Numbers
    - Credit card numbers
-4. **Decision**:
-   - **PII found** → Block post, send DM alerts, log to file
-   - **Clean** → Post normally to Bluesky/Mastodon
+4. **If PII found:** Block post, save draft, send DM alerts, log to file
+5. **If clean:** Post normally to Bluesky/Mastodon
+
+The PII service runs continuously with pre-loaded spaCy models, providing fast analysis (~100-200ms per edit).
 
 ### Setup
 
@@ -215,12 +229,12 @@ When PII is detected, posts are blocked and saved as drafts for manual review. A
 ### Fail-safe design
 
 The system blocks posts if:
-- PII is detected
-- Diff text cannot be extracted
-- PII analysis errors or times out
-- Any unexpected error occurs
+- PII is detected with any confidence level
+- Diff text cannot be extracted from Wikipedia
+- PII service is unreachable or times out (5s timeout)
+- Any unexpected error occurs during screening
 
-Better to block a legitimate edit than to amplify real PII.
+If the PII service is unavailable, the bot allows posts through with a warning log (avoiding complete service outage). The persistent microservice architecture makes this scenario rare.
 
 ### Accuracy
 
