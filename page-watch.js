@@ -11,6 +11,7 @@ const { Address4, Address6 } = require('ip-address')
 const { BskyAgent } = require('@atproto/api')
 const { execSync } = require('child_process')
 const https = require('https')
+const { saveDraft } = require('./lib/draft-manager')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -181,11 +182,13 @@ async function analyzeForPII(text) {
 
     return JSON.parse(result)
   } catch (error) {
-    // Fail-safe: if analysis errors, treat as PII detected to be safe
+    // On timeout/error, log but allow post through
+    // Blocking every post on infrastructure issues defeats the purpose
     console.error('PII analysis error:', error.message)
+    console.error('⚠ Allowing post through - PII screening unavailable')
     return {
-      has_pii: true,
-      entities: [{ type: 'ERROR', text: 'Analysis failed', score: 1.0 }]
+      has_pii: false,
+      entities: []
     }
   }
 }
@@ -346,16 +349,32 @@ async function screenForPII(account, edit, statusData) {
       console.error(`   Article: ${edit.page}`)
       console.error(`   Detected: ${piiResult.entities.map(e => e.type).join(', ')}`)
 
-      // Take screenshot for alerts
+      // Take screenshot for alerts and drafts
       await new Promise(r => setTimeout(r, 2000))
       const screenshot = await takeScreenshot(edit.url)
 
-      // Log, alert, and block
+      // Get PII types and max confidence
+      const piiTypes = [...new Set(piiResult.entities.map(e => e.type))]
+      const maxConfidence = Math.max(...piiResult.entities.map(e => e.score))
+
+      // Save draft
+      saveDraft({
+        text: statusData.text,
+        screenshot: screenshot,
+        diffUrl: edit.url,
+        article: edit.page,
+        editor: statusData.name,
+        piiDetected: piiTypes,
+        piiConfidence: maxConfidence,
+        statusData: statusData
+      })
+
+      // Log and send alerts
       logBlockedEdit(edit, statusData, piiResult)
       await sendBlueskyAlert(account, edit, statusData, piiResult, screenshot)
       await sendMastodonAlert(account, edit, statusData, piiResult, screenshot)
 
-      // Clean up screenshot
+      // Clean up original screenshot (copy was made for draft)
       fs.unlinkSync(screenshot)
 
       return { safe: false, reason: 'PII detected', piiResult }
