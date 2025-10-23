@@ -196,15 +196,21 @@ You'll receive DMs on both Bluesky and Mastodon with:
 
 The blocked edit is also logged to `pii-blocks.log` for SSH review.
 
-### Reviewing blocked edits
+### Admin Console for Draft Review
 
-If you receive an alert and determine it's a false positive:
+When PII is detected, posts are blocked and saved as drafts for manual review. Access the admin console to review and approve drafts.
 
-1. Review the diff URL to confirm it's safe
-2. Manually post from the @sfedits account:
-   - Copy the post text from the alert
-   - Take a screenshot of the diff (or use the diff URL)
-   - Post to Bluesky/Mastodon manually
+**Access admin console:**
+- URL: `http://your-droplet-ip:3000`
+- Authentication: Passwordless via Bluesky DM
+- Click "Send Code to Bluesky" → Check your DMs → Enter 6-digit code
+
+**Features:**
+- View all blocked posts with screenshots
+- See what PII was detected and confidence scores
+- Clickable links showing exactly how the post will appear
+- One-click posting to both Bluesky and Mastodon
+- Automatic retry on partial failures (if one platform fails, retry posts only to failed platform)
 
 ### Fail-safe design
 
