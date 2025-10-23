@@ -1,11 +1,20 @@
 from flask import Flask, request, jsonify
 from presidio_analyzer import AnalyzerEngine
+from presidio_analyzer.nlp_engine import SpacyNlpEngine
 
 app = Flask(__name__)
 
 # Load analyzer once at startup - this is the expensive operation (15-20s)
 print("Loading Presidio analyzer and spaCy model...", flush=True)
-analyzer = AnalyzerEngine(supported_languages=['en'])
+
+# Force use of small model only
+nlp_config = {
+    "nlp_engine_name": "spacy",
+    "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}]
+}
+nlp_engine = SpacyNlpEngine(models=nlp_config["models"])
+analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=['en'])
+
 print("Analyzer ready", flush=True)
 
 
