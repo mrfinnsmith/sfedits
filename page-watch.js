@@ -11,7 +11,7 @@ const { Address4, Address6 } = require('ip-address')
 const { BskyAgent } = require('@atproto/api')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
-const { buildMastodonHtml } = require('./lib/html-utils')
+const { buildMastodonText } = require('./lib/html-utils')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -525,7 +525,7 @@ async function sendStatus(account, statusData, edit) {
           description: `Screenshot of edit to ${edit.page}`
         })
 
-        const mastodonHtml = buildMastodonHtml(
+        const mastodonText = buildMastodonText(
           statusData.text,
           statusData.page,
           statusData.name,
@@ -534,8 +534,7 @@ async function sendStatus(account, statusData, edit) {
         )
 
         await M.post('statuses', {
-          status: mastodonHtml,
-          content_type: 'text/html',
+          status: mastodonText,
           media_ids: [mediaData.data.id]
         })
       }
