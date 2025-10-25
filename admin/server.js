@@ -6,6 +6,7 @@ const fs = require('fs')
 const path = require('path')
 const { BskyAgent } = require('@atproto/api')
 const Mastodon = require('mastodon')
+const { buildMastodonHtml } = require('../lib/html-utils')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -297,8 +298,17 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
           description: `Screenshot of edit to ${draft.article}`
         })
 
+        const mastodonHtml = buildMastodonHtml(
+          draft.text,
+          draft.status_data.page,
+          draft.status_data.name,
+          draft.status_data.pageUrl,
+          draft.status_data.userUrl
+        )
+
         await M.post('statuses', {
-          status: draft.text,
+          status: mastodonHtml,
+          content_type: 'text/html',
           media_ids: [mediaData.data.id]
         })
 
