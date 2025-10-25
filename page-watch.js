@@ -12,7 +12,7 @@ const { BskyAgent } = require('@atproto/api')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
 const { buildMastodonText } = require('./lib/html-utils')
-const { enrichIPWithCountry } = require('./lib/geolocation')
+const { enrichIPsInText } = require('./lib/geolocation')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -402,18 +402,15 @@ async function screenForPII(account, edit, statusData) {
   }
 }
 
-async function getStatus(edit, name, template) {
+function getStatus(edit, name, template) {
   const pageUrl = getArticleUrl(edit.url, edit.page)
   const userUrl = getUserContributionsUrl(edit.url, name)
 
-  let text = Mustache.render(template, {
+  const text = Mustache.render(template, {
     name,
     url: edit.url,
     page: edit.page
   })
-
-  // Enrich IP addresses with country flags
-  text = await enrichIPWithCountry(name, text)
 
   return {
     text,
@@ -478,6 +475,9 @@ async function sendStatus(account, statusData, edit) {
         return
       }
 
+      // Enrich IP addresses with country flags
+      const enrichedText = await enrichIPsInText(statusData.text)
+
       await new Promise(r => setTimeout(r, 2000));
       const screenshot = await takeScreenshot(edit.url)
 
@@ -495,7 +495,7 @@ async function sendStatus(account, statusData, edit) {
         })
 
         const facets = buildFacets(
-          statusData.text,
+          enrichedText,
           statusData.page,
           statusData.name,
           statusData.pageUrl,
@@ -503,7 +503,7 @@ async function sendStatus(account, statusData, edit) {
         )
 
         await agent.post({
-          text: statusData.text,
+          text: enrichedText,
           facets: facets,
           embed: {
             $type: 'app.bsky.embed.images',
@@ -530,7 +530,7 @@ async function sendStatus(account, statusData, edit) {
         })
 
         const mastodonText = buildMastodonText(
-          statusData.text,
+          enrichedText,
           statusData.page,
           statusData.name,
           statusData.pageUrl,
@@ -555,8 +555,8 @@ async function inspect(account, edit) {
   if (edit.url) {
     if (account.watchlist && account.watchlist[edit.wikipedia]
       && account.watchlist[edit.wikipedia][edit.page]) {
-      const statusData = await getStatus(edit, edit.user, account.template)
-      sendStatus(account, statusData, edit)
+      const statusData = getStatus(edit, edit.user, account.template)
+      await sendStatus(account, statusData, edit)
     }
   }
 }
@@ -578,8 +578,9 @@ function main() {
         if (argv.verbose) {
           console.log(JSON.stringify(edit))
         }
-        Array.from(config.accounts).forEach((account) =>
-          inspect(account, edit).catch(error => console.error('Inspect error:', error)))
+        Array.from(config.accounts).forEach((account) => {
+          inspect(account, edit).catch(error => console.error('Inspect error:', error))
+        })
       })
     } else {
       return console.log(err)
