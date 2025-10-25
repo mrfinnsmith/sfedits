@@ -17,4 +17,13 @@ services:
     volumes:
       - ./config.json:/opt/sfedits/config.json:ro
       - ./drafts:/opt/sfedits/drafts
+      - ./data:/opt/sfedits/data
+    restart: unless-stopped
+
+  maxmind-updater:
+    image: curlimages/curl:latest
+    volumes:
+      - ./data:/data
+      - ./scripts/update-maxmind.sh:/update-maxmind.sh:ro
+    entrypoint: /bin/sh -c 'while true; do /update-maxmind.sh; sleep 604800; done'
     restart: unless-stopped
