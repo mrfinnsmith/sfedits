@@ -12,6 +12,7 @@ const { BskyAgent } = require('@atproto/api')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
 const { buildMastodonText } = require('./lib/html-utils')
+const { enrichIPWithCountry } = require('./lib/geolocation')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -401,15 +402,18 @@ async function screenForPII(account, edit, statusData) {
   }
 }
 
-function getStatus(edit, name, template) {
+async function getStatus(edit, name, template) {
   const pageUrl = getArticleUrl(edit.url, edit.page)
   const userUrl = getUserContributionsUrl(edit.url, name)
 
-  const text = Mustache.render(template, {
+  let text = Mustache.render(template, {
     name,
     url: edit.url,
     page: edit.page
   })
+
+  // Enrich IP addresses with country flags
+  text = await enrichIPWithCountry(name, text)
 
   return {
     text,
@@ -547,11 +551,11 @@ async function sendStatus(account, statusData, edit) {
   }
 }
 
-function inspect(account, edit) {
+async function inspect(account, edit) {
   if (edit.url) {
     if (account.watchlist && account.watchlist[edit.wikipedia]
       && account.watchlist[edit.wikipedia][edit.page]) {
-      const statusData = getStatus(edit, edit.user, account.template)
+      const statusData = await getStatus(edit, edit.user, account.template)
       sendStatus(account, statusData, edit)
     }
   }
@@ -574,8 +578,8 @@ function main() {
         if (argv.verbose) {
           console.log(JSON.stringify(edit))
         }
-        Array.from(config.accounts).map((account) =>
-          inspect(account, edit))
+        Array.from(config.accounts).forEach((account) =>
+          inspect(account, edit).catch(error => console.error('Inspect error:', error)))
       })
     } else {
       return console.log(err)
