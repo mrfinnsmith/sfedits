@@ -1,30 +1,39 @@
 # SF Edits
 
-A Wikipedia edit monitoring bot that watches for edits to San Francisco-related articles and posts screenshots to Bluesky and Mastodon with automated PII screening.
+A Wikipedia edit monitoring bot that watches for edits to San Francisco-related articles and posts screenshots to Bluesky and Mastodon. Includes automated PII screening, geolocation enrichment for anonymous edits, and a web UI for reviewing blocked posts.
 
 Based on [anon](https://github.com/edsu/anon), originally created for @congressedits.
 
 ## Architecture
 
-**Two-service microservice architecture:**
+**Three-service microservice architecture (docker-compose):**
 
 1. **Bot service** (Node.js)
    - Monitors Wikipedia IRC feed for real-time edits
    - Watches configured SF-related articles
+   - Screens edits for PII before posting
+   - Enriches anonymous IPs with country flags (MaxMind GeoLite2-City)
    - Takes screenshots with Puppeteer
    - Posts to Bluesky and Mastodon
 
 2. **PII service** (Python/Flask)
-   - Persistent analyzer with pre-loaded spaCy models
+   - Persistent analyzer with pre-loaded spaCy model
    - Screens edits for personally identifiable information
    - Responds in ~100-200ms via HTTP API
+   - Used by bot and admin console
+
+3. **MaxMind updater** (curl)
+   - Downloads latest IP geolocation database weekly
+   - Runs continuously in background
+   - Updates transparently - no restarts needed
 
 ## How it works
 
-1. Bot detects edit → Fetches diff from Wikipedia
-2. Sends diff text to PII service for analysis
-3. **If PII detected:** Block post, save draft, send DM alerts
-4. **If clean:** Take screenshot and post to both platforms
+1. Bot detects Wikipedia edit
+2. Fetches diff HTML and extracts text
+3. Sends text to PII service for screening
+4. **If PII detected:** Block post, save draft, send DM alerts
+5. **If clean:** Enrich IP with country flag, take screenshot, post to both platforms
 
 ## Setup
 
