@@ -26,89 +26,99 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 3. **If PII detected:** Block post, save draft, send DM alerts
 4. **If clean:** Take screenshot and post to both platforms
 
-## Quick Start
+## Setup
 
-### Local Development
+### 1. Create configuration
 
-```bash
-git clone https://github.com/mrfinnsmith/sfedits.git
-cd sfedits
-npm install
-cp config.json.template config.json
-# Edit config.json with your Bluesky/Mastodon credentials and watchlist
-node page-watch.js --noop  # Test mode - doesn't post
-```
-
-### Production Deployment (Digital Ocean)
-
-1. **Create droplet** (minimum 512MB RAM) with Ubuntu 22.04+
-
-2. **Setup server:**
-```bash
-# Add swap for Puppeteer/Chrome (REQUIRED for 512MB droplet)
-fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
-echo '/swapfile none swap sw 0 0' >> /etc/fstab
-
-# Install dependencies
-apt update && apt install -y docker.io docker-compose git
-
-# Clone repo
-git clone https://github.com/mrfinnsmith/sfedits.git
-cd sfedits
-```
-
-3. **Configure:**
 ```bash
 cp config.json.template config.json
-vi config.json  # Add your Bluesky/Mastodon credentials and watchlist
+# Edit with your Bluesky/Mastodon credentials and article watchlist
 ```
 
-4. **Deploy:**
+### 2. Run locally
+
+**Docker (recommended):**
 ```bash
 docker-compose up -d
 ```
 
+**Node.js (requires Python/PII service separate):**
+```bash
+npm install
+node page-watch.js --noop  # Test mode - doesn't post
+```
+
 The PII service will take ~20-30 seconds to load spaCy models on first start. The bot waits for the PII service to be healthy before starting.
 
-## Management Commands
+### 3. Deploy to production
+
+When ready to deploy to a live server:
+
+1. **Get a droplet** (minimum 512MB RAM, Ubuntu 22.04+)
+
+2. **On your local machine**, create `.env`:
+```bash
+DROPLET_IP=your.droplet.ip
+```
+
+3. **Deploy:**
+```bash
+./deploy.sh
+```
+
+This syncs your code, builds containers, and starts the bot.
+
+**First-time setup on droplet:**
+```bash
+ssh root@YOUR_DROPLET_IP
+cd /root/sfedits
+cat > .env << 'EOF'
+DROPLET_IP=YOUR_DROPLET_IP
+EOF
+```
+
+(You only do this once.)
+
+## Management
+
+Once deployed, SSH into the droplet:
 
 ```bash
+ssh root@YOUR_DROPLET_IP
+cd /root/sfedits
+
 # Check status
 docker-compose ps
 
 # View logs
-docker-compose logs -f          # Both services
-docker-compose logs -f bot      # Bot only
-docker-compose logs -f pii-service  # PII service only
+docker-compose logs -f
+docker-compose logs -f bot
+docker-compose logs -f pii-service
 
-# Control services
-docker-compose restart          # Restart both
-docker-compose restart bot      # Restart bot only
-docker-compose stop             # Stop all
-docker-compose down             # Stop and remove containers
+# Restart services
+docker-compose restart
 
-# Update config and restart
-vi config.json
-docker-compose restart bot
-
-# Deploy code changes
-git pull && docker-compose down && docker system prune -af && docker-compose build && docker-compose up -d
+# Stop all
+docker-compose down
 ```
 
-**Note:** Services are configured with `restart: unless-stopped` so they automatically restart if interrupted or if the server reboots.
+**To update code:** Just run `./deploy.sh` on your local machine again.
+
+**To change config:** Edit `config.json` on the droplet and run `docker-compose restart bot`.
 
 ## Maintenance
 
-**Automated systems in place:**
-- Weekly Docker cleanup (Sundays 3am) - removes unused images/containers older than 7 days
-- Docker logs capped at 50MB per container
-- System logs capped at 500MB
-- Email alerts at 75% disk usage via Digital Ocean monitoring
+Services automatically restart if interrupted or if the server reboots.
 
-**Manual disk check:**
+**Check disk usage:**
 ```bash
-df -h /                # Overall disk usage
-docker system df       # Docker-specific usage
+df -h /
+docker system df
+```
+
+**Clean up old Docker images:**
+```bash
+docker system prune -af
 ```
 
 ## Configuration
@@ -214,51 +224,41 @@ The blocked edit is also logged to `pii-blocks.log` for SSH review.
 
 When PII is detected, posts are blocked and saved as drafts. The admin console is a web UI for reviewing and posting drafts.
 
-**Deploy admin console (separate container):**
+**Deploy (on the droplet):**
 
+SSH into your droplet and run:
 ```bash
+cd /root/sfedits
 docker build -t sfedits-admin -f admin/Dockerfile . && \
 docker run -d \
   --name sfedits-admin \
   -p 3000:3000 \
   -e CONFIG_PATH=/opt/sfedits-admin/config.json \
-  -v $(pwd)/config.json:/opt/sfedits-admin/config.json:ro \
-  -v $(pwd)/drafts:/opt/sfedits-admin/drafts \
+  -v /root/sfedits/config.json:/opt/sfedits-admin/config.json:ro \
+  -v /root/sfedits/drafts:/opt/sfedits-admin/drafts \
   --restart unless-stopped \
   sfedits-admin
 ```
 
 **Requirements:**
-- Bot's Bluesky app password must have "Allow access to your direct messages" enabled
-- Create a DM conversation between bot account and `pii_alerts.bluesky_recipient` (send one DM manually in Bluesky app)
-- `pii_alerts.bluesky_recipient` must be set in config.json
-- Port 3000 must be accessible
+- Bot's Bluesky app password has "Allow access to your direct messages" enabled
+- DM conversation exists between bot and recipient (start manually in Bluesky app)
+- `pii_alerts.bluesky_recipient` is set in config.json
+- Port 3000 is accessible
 
 **Access:**
 - URL: `http://your-droplet-ip:3000`
 - Click "Send Code to Bluesky" → Check DMs → Enter 6-digit code
 - Session lasts 24 hours
 
-**Update admin code:**
-```bash
-git pull && \
-docker stop sfedits-admin && docker rm sfedits-admin && \
-docker build -t sfedits-admin -f admin/Dockerfile . && \
-docker run -d \
-  --name sfedits-admin \
-  -p 3000:3000 \
-  -e CONFIG_PATH=/opt/sfedits-admin/config.json \
-  -v $(pwd)/config.json:/opt/sfedits-admin/config.json:ro \
-  -v $(pwd)/drafts:/opt/sfedits-admin/drafts \
-  --restart unless-stopped \
-  sfedits-admin
-```
+**Update:**
+Just run `./deploy.sh` from your local machine - the admin container syncs along with the bot code.
 
 **Features:**
 - Review blocked posts with screenshots
 - See detected PII types and confidence scores
 - Post to both platforms with one click
-- Automatic retry (if one platform fails, retry posts only to that platform)
+- Automatic retry if one platform fails
 
 ### Fail-safe design
 
