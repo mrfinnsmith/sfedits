@@ -25,5 +25,5 @@ services:
     volumes:
       - ./data:/data
       - ./scripts/update-maxmind.sh:/update-maxmind.sh:ro
-    entrypoint: /bin/sh -c 'while true; do /update-maxmind.sh; sleep 604800; done'
+    entrypoint: /bin/sh -c 'while true; do sh /update-maxmind.sh; sleep 604800; done'
     restart: unless-stopped
