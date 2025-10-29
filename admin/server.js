@@ -6,7 +6,7 @@ const fs = require('fs')
 const path = require('path')
 const { BskyAgent } = require('@atproto/api')
 const Mastodon = require('mastodon')
-const { buildMastodonText } = require('../lib/html-utils')
+const { buildMastodonText } = require('./lib/html-utils')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -234,9 +234,49 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
     const config = loadConfig()
     const account = config.accounts[0]
 
-    const screenshotPath = path.join(DRAFTS_DIR, 'screenshots', `${draft.id}.png`)
     const results = []
     const postedTo = draft.posted_to || []
+
+    // Take screenshot for posting (admin console doesn't save it in draft)
+    let screenshot = null
+    try {
+      const puppeteer = require('puppeteer')
+      const filename = path.resolve(Date.now() + '.png')
+
+      const browser = await puppeteer.launch({
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote',
+          '--font-render-hinting=none'
+        ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      })
+
+      try {
+        const page = await browser.newPage()
+        await page.setViewport({ width: 1200, height: 800 })
+        await page.goto(draft.diff_url, { waitUntil: 'networkidle0' })
+
+        const element = await page.$('table.diff.diff-type-table.diff-contentalign-left')
+        if (element) {
+          const box = await element.boundingBox()
+          await page.screenshot({
+            path: filename,
+            clip: box
+          })
+          screenshot = filename
+        }
+      } finally {
+        await browser.close()
+      }
+    } catch (error) {
+      console.error('Failed to take screenshot:', error.message)
+      // Continue without screenshot rather than failing entire post
+    }
 
     // Post to Bluesky if configured and not already posted
     if (account.bluesky && !postedTo.includes('bluesky')) {
@@ -247,11 +287,6 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
 
         await agent.login(account.bluesky)
 
-        const imageData = fs.readFileSync(screenshotPath)
-        const uploadResult = await agent.uploadBlob(imageData, {
-          encoding: 'image/png'
-        })
-
         const facets = buildFacets(
           draft.text,
           draft.status_data.page,
@@ -260,18 +295,27 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
           draft.status_data.userUrl
         )
 
-        await agent.post({
+        const postData = {
           text: draft.text,
           facets: facets,
-          embed: {
+          createdAt: new Date().toISOString()
+        }
+
+        if (screenshot && fs.existsSync(screenshot)) {
+          const imageData = fs.readFileSync(screenshot)
+          const uploadResult = await agent.uploadBlob(imageData, {
+            encoding: 'image/png'
+          })
+          postData.embed = {
             $type: 'app.bsky.embed.images',
             images: [{
               alt: `Screenshot of edit to ${draft.article}`,
               image: uploadResult.data.blob
             }]
-          },
-          createdAt: new Date().toISOString()
-        })
+          }
+        }
+
+        await agent.post(postData)
 
         console.log(`✓ Posted to Bluesky`)
         postedTo.push('bluesky')
@@ -292,12 +336,6 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
           api_url: account.mastodon.instance + '/api/v1/'
         })
 
-        const imageData = fs.createReadStream(screenshotPath)
-        const mediaData = await M.post('media', {
-          file: imageData,
-          description: `Screenshot of edit to ${draft.article}`
-        })
-
         const mastodonText = buildMastodonText(
           draft.text,
           draft.status_data.page,
@@ -306,10 +344,20 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
           draft.status_data.userUrl
         )
 
-        await M.post('statuses', {
-          status: mastodonText,
-          media_ids: [mediaData.data.id]
-        })
+        const postData = {
+          status: mastodonText
+        }
+
+        if (screenshot && fs.existsSync(screenshot)) {
+          const imageData = fs.createReadStream(screenshot)
+          const mediaData = await M.post('media', {
+            file: imageData,
+            description: `Screenshot of edit to ${draft.article}`
+          })
+          postData.media_ids = [mediaData.data.id]
+        }
+
+        await M.post('statuses', postData)
 
         console.log(`✓ Posted to Mastodon`)
         postedTo.push('mastodon')
@@ -320,6 +368,11 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
       }
     } else if (postedTo.includes('mastodon')) {
       results.push({ platform: 'mastodon', success: true, skipped: true })
+    }
+
+    // Clean up screenshot
+    if (screenshot && fs.existsSync(screenshot)) {
+      fs.unlinkSync(screenshot)
     }
 
     // Update draft with posted platforms

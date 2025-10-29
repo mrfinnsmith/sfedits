@@ -535,10 +535,10 @@
       const timestamp = new Date(draft.timestamp)
       const timeAgo = getTimeAgo(timestamp)
 
-      const screenshotUrl = `/screenshots/${draft.screenshot.split('/').pop()}?t=${authToken}`
+      const screenshotUrl = draft.screenshot ? `/screenshots/${draft.screenshot.split('/').pop()}?t=${authToken}` : null
 
       card.innerHTML = `
-        <img class="draft-screenshot" src="${screenshotUrl}" alt="Screenshot" onclick="showModal('${screenshotUrl}')">
+        ${screenshotUrl ? `<img class="draft-screenshot" src="${screenshotUrl}" alt="Screenshot" onclick="showModal('${screenshotUrl}')">` : ''}
         <div class="draft-content">
           <div class="draft-meta">
             <span>

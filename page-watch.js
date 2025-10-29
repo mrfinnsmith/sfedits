@@ -220,7 +220,7 @@ function logBlockedEdit(edit, statusData, piiResult) {
  * Send DM alert via Bluesky
  * Uses api.bsky.chat service directly (not routed through bsky.social PDS)
  */
-async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot) {
+async function sendBlueskyAlert(account, edit, statusData, piiResult) {
   if (!account.pii_alerts?.bluesky_recipient) return
 
   try {
@@ -231,12 +231,6 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot
     await agent.login(account.bluesky)
 
     const accessJwt = agent.session.accessJwt
-
-    // Upload screenshot
-    const imageData = fs.readFileSync(screenshot)
-    const uploadResult = await agent.uploadBlob(imageData, {
-      encoding: 'image/png'
-    })
 
     // Build facets for clickable links (same as regular post)
     const alertText = `PII: ${statusData.text}`
@@ -271,7 +265,7 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot
       return
     }
 
-    // Send message with image - chat API is at api.bsky.chat
+    // Send message - chat API is at api.bsky.chat
     await fetch('https://api.bsky.chat/xrpc/chat.bsky.convo.sendMessage', {
       method: 'POST',
       headers: {
@@ -282,14 +276,7 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot
         convoId: convo.id,
         message: {
           text: alertText,
-          facets: facets,
-          embed: {
-            $type: 'app.bsky.embed.images',
-            images: [{
-              alt: `Screenshot of edit to ${edit.page}`,
-              image: uploadResult.data.blob
-            }]
-          }
+          facets: facets
         }
       })
     })
@@ -303,7 +290,7 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot
 /**
  * Send DM alert via Mastodon
  */
-async function sendMastodonAlert(account, edit, statusData, piiResult, screenshot) {
+async function sendMastodonAlert(account, edit, statusData, piiResult) {
   if (!account.pii_alerts?.mastodon_recipient) return
 
   try {
@@ -312,19 +299,11 @@ async function sendMastodonAlert(account, edit, statusData, piiResult, screensho
       api_url: account.mastodon.instance + '/api/v1/'
     })
 
-    // Upload screenshot
-    const imageData = fs.createReadStream(screenshot)
-    const mediaData = await M.post('media', {
-      file: imageData,
-      description: `Screenshot of edit to ${edit.page}`
-    })
-
     // Same message as regular post, just prefixed with "PII: "
     const alertText = `PII: ${statusData.text}`
 
     await M.post('statuses', {
       status: `@${account.pii_alerts.mastodon_recipient} ${alertText}`,
-      media_ids: [mediaData.data.id],
       visibility: 'direct'
     })
 
@@ -371,10 +350,9 @@ async function screenForPII(account, edit, statusData) {
       const piiTypes = [...new Set(piiResult.entities.map(e => e.type))]
       const maxConfidence = Math.max(...piiResult.entities.map(e => e.score))
 
-      // Save draft
+      // Save draft (no screenshot - only for alerts which don't need it)
       saveDraft({
         text: statusData.text,
-        screenshot: screenshot,
         diffUrl: edit.url,
         article: edit.page,
         editor: statusData.name,
@@ -385,10 +363,10 @@ async function screenForPII(account, edit, statusData) {
 
       // Log and send alerts
       logBlockedEdit(edit, statusData, piiResult)
-      await sendBlueskyAlert(account, edit, statusData, piiResult, screenshot)
-      await sendMastodonAlert(account, edit, statusData, piiResult, screenshot)
+      await sendBlueskyAlert(account, edit, statusData, piiResult)
+      await sendMastodonAlert(account, edit, statusData, piiResult)
 
-      // Clean up original screenshot (copy was made for draft)
+      // Clean up temporary screenshot
       fs.unlinkSync(screenshot)
 
       return { safe: false, reason: 'PII detected', piiResult }
