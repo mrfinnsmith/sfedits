@@ -5,14 +5,13 @@ const async = require('async')
 const minimist = require('minimist')
 const Mastodon = require('mastodon')
 const Mustache = require('mustache')
-const puppeteer = require('puppeteer')
 const { WikiChanges } = require('wikichanges')
-const { Address4, Address6 } = require('ip-address')
 const { BskyAgent } = require('@atproto/api')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
 const { buildMastodonText } = require('./lib/html-utils')
-const { enrichIPsInText } = require('./lib/geolocation')
+const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
+const { takeScreenshot } = require('./lib/screenshot')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -220,7 +219,7 @@ function logBlockedEdit(edit, statusData, piiResult) {
  * Send DM alert via Bluesky
  * Uses api.bsky.chat service directly (not routed through bsky.social PDS)
  */
-async function sendBlueskyAlert(account, edit, statusData, piiResult) {
+async function sendBlueskyAlert(account, edit, statusData, _piiResult) {
   if (!account.pii_alerts?.bluesky_recipient) return
 
   try {
@@ -290,7 +289,7 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult) {
 /**
  * Send DM alert via Mastodon
  */
-async function sendMastodonAlert(account, edit, statusData, piiResult) {
+async function sendMastodonAlert(account, edit, statusData, _piiResult) {
   if (!account.pii_alerts?.mastodon_recipient) return
 
   try {
@@ -342,15 +341,11 @@ async function screenForPII(account, edit, statusData) {
       console.error(`   Article: ${edit.page}`)
       console.error(`   Detected: ${piiResult.entities.map(e => e.type).join(', ')}`)
 
-      // Take screenshot for alerts and drafts
-      await new Promise(r => setTimeout(r, 2000))
-      const screenshot = await takeScreenshot(edit.url)
-
       // Get PII types and max confidence
       const piiTypes = [...new Set(piiResult.entities.map(e => e.type))]
       const maxConfidence = Math.max(...piiResult.entities.map(e => e.score))
 
-      // Save draft (no screenshot - only for alerts which don't need it)
+      // Save draft (screenshot taken later if admin chooses to post)
       saveDraft({
         text: statusData.text,
         diffUrl: edit.url,
@@ -361,13 +356,10 @@ async function screenForPII(account, edit, statusData) {
         statusData: statusData
       })
 
-      // Log and send alerts
+      // Log and send text-only alerts
       logBlockedEdit(edit, statusData, piiResult)
       await sendBlueskyAlert(account, edit, statusData, piiResult)
       await sendMastodonAlert(account, edit, statusData, piiResult)
-
-      // Clean up temporary screenshot
-      fs.unlinkSync(screenshot)
 
       return { safe: false, reason: 'PII detected', piiResult }
     }
@@ -399,47 +391,6 @@ function getStatus(edit, name, template) {
   }
 }
 
-const lastChange = {}
-
-async function takeScreenshot(url) {
-
-  // write the screenshot to this file
-  const filename = Date.now() + '.png'
-
-  const browser = await puppeteer.launch({
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--single-process',
-      '--no-zygote',
-      '--font-render-hinting=none'
-    ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-  });
-
-  try {
-    const page = await browser.newPage()
-    await page.setViewport({ width: 1200, height: 800 })
-    await page.goto(url, { waitUntil: 'networkidle0' })
-
-    // get the diff portion of the page
-    const element = await page.$('table.diff.diff-type-table.diff-contentalign-left');
-    const box = await element.boundingBox();
-
-    await page.screenshot({
-      path: filename,
-      clip: box
-    });
-
-    return filename
-  } finally {
-    // Always close browser, even if there's an error
-    await browser.close()
-  }
-}
-
 async function sendStatus(account, statusData, edit) {
   try {
     console.log(statusData.text)
@@ -458,6 +409,10 @@ async function sendStatus(account, statusData, edit) {
 
       await new Promise(r => setTimeout(r, 2000));
       const screenshot = await takeScreenshot(edit.url)
+
+      if (!screenshot) {
+        throw new Error('Failed to capture screenshot')
+      }
 
       // Bluesky
       if (account.bluesky) {
@@ -547,8 +502,12 @@ function checkConfig(config, error) {
   }
 }
 
-function main() {
+async function main() {
   const config = getConfig(argv.config)
+
+  // Initialize geolocation database before listening for edits
+  await initializeReader()
+
   return checkConfig(config, function (err) {
     if (!err) {
       const wikipedia = new WikiChanges({ ircNickname: config.nick })
@@ -567,7 +526,10 @@ function main() {
 }
 
 if (require.main === module) {
-  main()
+  main().catch(error => {
+    console.error('Fatal error:', error)
+    process.exit(1)
+  })
 }
 
 module.exports = {
@@ -577,7 +539,6 @@ module.exports = {
   getArticleUrl,
   getUserContributionsUrl,
   buildFacets,
-  takeScreenshot,
   inspect,
   sendStatus,
   extractDiffText,
