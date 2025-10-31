@@ -2,6 +2,9 @@ services:
   pii-service:
     build: ./pii-service
     restart: unless-stopped
+    # Memory limits to prevent OOM on small droplets
+    mem_limit: 256m
+    mem_reservation: 128m
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 10s
@@ -19,6 +22,9 @@ services:
       - ./drafts:/opt/sfedits/drafts
       - ./data:/opt/sfedits/data
     restart: unless-stopped
+    # Memory limits for main bot process
+    mem_limit: 256m
+    mem_reservation: 128m
 
   admin:
     build:
@@ -35,6 +41,9 @@ services:
     depends_on:
       pii-service:
         condition: service_healthy
+    # Memory limits for admin web UI
+    mem_limit: 128m
+    mem_reservation: 64m
 
   maxmind-updater:
     image: curlimages/curl:latest
@@ -43,3 +52,6 @@ services:
       - ./scripts/update-maxmind.sh:/update-maxmind.sh:ro
     entrypoint: /bin/sh -c 'while true; do sh /update-maxmind.sh; sleep 604800; done'
     restart: unless-stopped
+    # Minimal memory for curl updater
+    mem_limit: 64m
+    mem_reservation: 32m
