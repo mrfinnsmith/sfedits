@@ -20,6 +20,22 @@ services:
       - ./data:/opt/sfedits/data
     restart: unless-stopped
 
+  admin:
+    build:
+      context: .
+      dockerfile: admin/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - CONFIG_PATH=/opt/sfedits-admin/config.json
+    volumes:
+      - ./config.json:/opt/sfedits-admin/config.json:ro
+      - ./drafts:/opt/sfedits-admin/drafts
+    restart: unless-stopped
+    depends_on:
+      pii-service:
+        condition: service_healthy
+
   maxmind-updater:
     image: curlimages/curl:latest
     volumes:

@@ -6,7 +6,7 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 
 ## Architecture
 
-**Three-service microservice architecture (docker-compose):**
+**Four-service microservice architecture (docker-compose):**
 
 1. **Bot service** (Node.js)
    - Monitors Wikipedia IRC feed for real-time edits
@@ -22,7 +22,13 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
    - Responds in ~100-200ms via HTTP API
    - Used by bot and admin console
 
-3. **MaxMind updater** (curl)
+3. **Admin console** (Node.js/Express)
+   - Web UI for reviewing PII-blocked drafts
+   - Bluesky DM authentication (passwordless login)
+   - Posts to Bluesky and Mastodon with retry logic
+   - Exposed on port 3000
+
+4. **MaxMind updater** (curl)
    - Downloads latest IP geolocation database weekly
    - Runs continuously in background
    - Updates transparently - no restarts needed
@@ -70,23 +76,39 @@ When ready to deploy to a live server:
 DROPLET_IP=your.droplet.ip
 ```
 
-3. **Deploy:**
-```bash
-./deploy.sh
-```
-
-This syncs your code, builds containers, and starts the bot.
-
-**First-time setup on droplet:**
+3. **First-time setup on droplet:**
 ```bash
 ssh root@YOUR_DROPLET_IP
 cd /root/sfedits
+
+# Initialize git repository
+git init
+git remote add origin YOUR_GIT_URL
+git fetch origin
+git reset --hard origin/main
+
+# Create droplet .env
 cat > .env << 'EOF'
 DROPLET_IP=YOUR_DROPLET_IP
 EOF
+
+# Create config.json with credentials
+cp config.json.template config.json
+nano config.json  # Edit with your credentials
+
+# Start all services
+docker-compose up -d
 ```
 
-(You only do this once.)
+4. **Deploy updates:**
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+./deploy.sh
+```
+
+The deploy script pulls latest code, rebuilds containers, and restarts all services.
 
 ## Management
 
@@ -103,6 +125,7 @@ docker-compose ps
 docker-compose logs -f
 docker-compose logs -f bot
 docker-compose logs -f pii-service
+docker-compose logs -f admin
 
 # Restart services
 docker-compose restart
@@ -111,9 +134,9 @@ docker-compose restart
 docker-compose down
 ```
 
-**To update code:** Just run `./deploy.sh` on your local machine again.
+**To update code:** Run `./deploy.sh` on your local machine.
 
-**To change config:** Edit `config.json` on the droplet and run `docker-compose restart bot`.
+**To change config:** Edit `config.json` on the droplet and run `docker-compose restart bot admin`.
 
 ## Maintenance
 
@@ -233,21 +256,9 @@ The blocked edit is also logged to `pii-blocks.log` for SSH review.
 
 When PII is detected, posts are blocked and saved as drafts. The admin console is a web UI for reviewing and posting drafts.
 
-**Deploy (on the droplet):**
+**Deployment:**
 
-SSH into your droplet and run:
-```bash
-cd /root/sfedits
-docker build -t sfedits-admin -f admin/Dockerfile . && \
-docker run -d \
-  --name sfedits-admin \
-  -p 3000:3000 \
-  -e CONFIG_PATH=/opt/sfedits-admin/config.json \
-  -v /root/sfedits/config.json:/opt/sfedits-admin/config.json:ro \
-  -v /root/sfedits/drafts:/opt/sfedits-admin/drafts \
-  --restart unless-stopped \
-  sfedits-admin
-```
+The admin console is automatically deployed as part of `docker-compose up -d`. No separate deployment needed.
 
 **Requirements:**
 - Bot's Bluesky app password has "Allow access to your direct messages" enabled
@@ -259,9 +270,6 @@ docker run -d \
 - URL: `http://your-droplet-ip:3000`
 - Click "Send Code to Bluesky" → Check DMs → Enter 6-digit code
 - Session lasts 24 hours
-
-**Update:**
-Just run `./deploy.sh` from your local machine - the admin container syncs along with the bot code.
 
 **Features:**
 - Review blocked posts with screenshots

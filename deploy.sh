@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy script - reads droplet IP from .env
+# Deploy script - pulls latest code on droplet and rebuilds containers
 
 set -e
 
@@ -17,20 +17,23 @@ if [ -z "$DROPLET_IP" ]; then
   exit 1
 fi
 
-DROPLET_USER="root"
-DROPLET_PATH="/root/sfedits"
-
 echo "Deploying to $DROPLET_IP..."
-
-rsync -avz --exclude '.git' --exclude 'node_modules' --exclude '__pycache__' \
-  --exclude '.env' --exclude 'config.json' . root@$DROPLET_IP:$DROPLET_PATH/
 
 ssh root@$DROPLET_IP << 'EOF'
   cd /root/sfedits
-  docker-compose down
-  docker system prune -af
-  docker-compose build
-  docker-compose up -d
-EOF
 
-echo "Deployment complete!"
+  # Pull latest code
+  git fetch origin
+  git reset --hard origin/main
+
+  # Clean up dangling images (keeps layer cache)
+  docker system prune -f
+
+  # Rebuild changed services and start
+  docker-compose up -d --build
+
+  # Show status
+  echo ""
+  echo "Deployment complete! Service status:"
+  docker-compose ps
+EOF
