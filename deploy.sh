@@ -71,6 +71,12 @@ ssh root@$DROPLET_IP << 'EOF'
   docker-compose build admin
 
   echo ""
+  echo "=== Stopping existing containers ==="
+  # Remove running/stopped containers to release port allocations
+  # docker system prune doesn't remove compose project containers
+  docker-compose down || true
+
+  echo ""
   echo "=== Starting services ==="
   # Start services (already built, so no memory spike)
   docker-compose up -d
