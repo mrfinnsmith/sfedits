@@ -304,11 +304,44 @@ Use the translation scripts to expand to additional languages or discover new ar
 
 ## Development
 
+### Testing
+
+The codebase has comprehensive test coverage to ensure reliability:
+
 ```bash
+npm test  # Run all tests (~3 seconds)
+```
+
+**Test suite:**
+- **41 passing tests** covering posting flow, text transformations, and URL helpers
+- **Integration test** that mocks Bluesky/Mastodon APIs and validates end-to-end posting
+- **Unit tests** for text pipeline, geolocation, facet building, and URL generation
+
+Tests use:
+- `mocha` + `chai` for test framework and assertions
+- `nock` for HTTP API mocking (Bluesky, Mastodon)
+- `proxyquire` for dependency injection
+- `sinon` for function stubbing
+
+**When to run tests:**
+- Before committing changes
+- After modifying posting flow or text transformations
+- Before refactoring or extracting code to `lib/`
+
+### Local Development
+
+```bash
+npm install                 # Install dependencies
 npm test                    # Run tests
-node page-watch.js --noop   # Test without posting
+node page-watch.js --noop   # Test mode - doesn't post
 node page-watch.js --verbose # Show all edit activity
 ```
+
+**Test mode (`--noop`):**
+- Monitors Wikipedia edits in real-time
+- Logs what would be posted
+- Doesn't actually post to Bluesky/Mastodon
+- Useful for testing config changes
 
 ## Scripts
 
