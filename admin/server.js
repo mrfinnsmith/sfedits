@@ -4,10 +4,11 @@ const express = require('express')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
-const { BskyAgent } = require('@atproto/api')
 const Mastodon = require('mastodon')
-const { buildMastodonText } = require('./lib/html-utils')
-const { takeScreenshot } = require('./lib/screenshot')
+const { buildMastodonText } = require('../lib/html-utils')
+const { takeScreenshot } = require('../lib/screenshot')
+const { buildFacets } = require('../lib/bluesky-utils')
+const { createAuthenticatedAgent } = require('../lib/bluesky-client')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -21,7 +22,7 @@ const loginCodes = new Map() // code -> { created: Date, expires: Date }
 const CODE_DURATION = 10 * 60 * 1000 // 10 minutes
 
 // Import draft manager from parent directory
-const { listDrafts, getDraft, deleteDraft, DRAFTS_DIR, SCREENSHOTS_DIR } = require('./lib/draft-manager')
+const { listDrafts, getDraft, deleteDraft, DRAFTS_DIR, SCREENSHOTS_DIR } = require('../lib/draft-manager')
 
 // Middleware
 app.use(express.json())
@@ -96,12 +97,7 @@ app.post('/api/auth/request-code', async (req, res) => {
     })
 
     // Send code via Bluesky DM
-    const agent = new BskyAgent({
-      service: account.bluesky.service || 'https://bsky.social'
-    })
-
-    await agent.login(account.bluesky)
-
+    const agent = await createAuthenticatedAgent(account.bluesky)
     const accessJwt = agent.session.accessJwt
 
     // Get conversation
@@ -247,11 +243,7 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
     // Post to Bluesky if configured and not already posted
     if (account.bluesky && !postedTo.includes('bluesky')) {
       try {
-        const agent = new BskyAgent({
-          service: account.bluesky.service || 'https://bsky.social'
-        })
-
-        await agent.login(account.bluesky)
+        const agent = await createAuthenticatedAgent(account.bluesky)
 
         const facets = buildFacets(
           draft.text,
@@ -402,62 +394,6 @@ app.get('/screenshots/:filename', requireAuth, (req, res) => {
   }
 })
 
-// Helper function to build Bluesky facets (copied from page-watch.js)
-function buildFacets(text, page, name, pageUrl, userUrl) {
-  const facets = []
-  let searchOffset = 0
-
-  // Article name facet (appears first in template)
-  if (pageUrl) {
-    const pageIndex = text.indexOf(page, searchOffset)
-    if (pageIndex !== -1) {
-      const byteStart = Buffer.byteLength(text.substring(0, pageIndex), 'utf8')
-      const byteEnd = byteStart + Buffer.byteLength(page, 'utf8')
-      facets.push({
-        index: { byteStart, byteEnd },
-        features: [{
-          $type: 'app.bsky.richtext.facet#link',
-          uri: pageUrl
-        }]
-      })
-      searchOffset = pageIndex + page.length
-    }
-  }
-
-  // Username facet (appears after page name in template)
-  if (userUrl) {
-    const nameIndex = text.indexOf(name, searchOffset)
-    if (nameIndex !== -1) {
-      const byteStart = Buffer.byteLength(text.substring(0, nameIndex), 'utf8')
-      const byteEnd = byteStart + Buffer.byteLength(name, 'utf8')
-      facets.push({
-        index: { byteStart, byteEnd },
-        features: [{
-          $type: 'app.bsky.richtext.facet#link',
-          uri: userUrl
-        }]
-      })
-    }
-  }
-
-  // Diff URL facet
-  const urlPattern = /https?:\/\/[^\s]+/g
-  let match
-  while ((match = urlPattern.exec(text)) !== null) {
-    const url = match[0]
-    const byteStart = Buffer.byteLength(text.substring(0, match.index), 'utf8')
-    const byteEnd = byteStart + Buffer.byteLength(url, 'utf8')
-    facets.push({
-      index: { byteStart, byteEnd },
-      features: [{
-        $type: 'app.bsky.richtext.facet#link',
-        uri: url
-      }]
-    })
-  }
-
-  return facets
-}
 
 // Start server
 app.listen(PORT, () => {

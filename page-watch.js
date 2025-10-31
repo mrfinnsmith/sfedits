@@ -6,12 +6,13 @@ const minimist = require('minimist')
 const Mastodon = require('mastodon')
 const Mustache = require('mustache')
 const { WikiChanges } = require('wikichanges')
-const { BskyAgent } = require('@atproto/api')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
 const { buildMastodonText } = require('./lib/html-utils')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
 const { takeScreenshot } = require('./lib/screenshot')
+const { buildFacets } = require('./lib/bluesky-utils')
+const { createAuthenticatedAgent } = require('./lib/bluesky-client')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -63,62 +64,6 @@ function getUserContributionsUrl(editUrl, username) {
   }
 }
 
-// Creates Bluesky facets for article name, username, and diff URL
-function buildFacets(text, page, name, pageUrl, userUrl) {
-  const facets = []
-  let searchOffset = 0
-
-  // Article name facet (appears first in template)
-  if (pageUrl) {
-    const pageIndex = text.indexOf(page, searchOffset)
-    if (pageIndex !== -1) {
-      const byteStart = Buffer.byteLength(text.substring(0, pageIndex), 'utf8')
-      const byteEnd = byteStart + Buffer.byteLength(page, 'utf8')
-      facets.push({
-        index: { byteStart, byteEnd },
-        features: [{
-          $type: 'app.bsky.richtext.facet#link',
-          uri: pageUrl
-        }]
-      })
-      searchOffset = pageIndex + page.length
-    }
-  }
-
-  // Username facet (appears after page name in template)
-  if (userUrl) {
-    const nameIndex = text.indexOf(name, searchOffset)
-    if (nameIndex !== -1) {
-      const byteStart = Buffer.byteLength(text.substring(0, nameIndex), 'utf8')
-      const byteEnd = byteStart + Buffer.byteLength(name, 'utf8')
-      facets.push({
-        index: { byteStart, byteEnd },
-        features: [{
-          $type: 'app.bsky.richtext.facet#link',
-          uri: userUrl
-        }]
-      })
-    }
-  }
-
-  // Diff URL facet
-  const urlPattern = /https?:\/\/[^\s]+/g
-  let match
-  while ((match = urlPattern.exec(text)) !== null) {
-    const url = match[0]
-    const byteStart = Buffer.byteLength(text.substring(0, match.index), 'utf8')
-    const byteEnd = byteStart + Buffer.byteLength(url, 'utf8')
-    facets.push({
-      index: { byteStart, byteEnd },
-      features: [{
-        $type: 'app.bsky.richtext.facet#link',
-        uri: url
-      }]
-    })
-  }
-
-  return facets
-}
 
 /**
  * Extract text content from Wikipedia diff HTML
@@ -223,12 +168,7 @@ async function sendBlueskyAlert(account, edit, statusData, _piiResult) {
   if (!account.pii_alerts?.bluesky_recipient) return
 
   try {
-    const agent = new BskyAgent({
-      service: account.bluesky.service || 'https://bsky.social'
-    })
-
-    await agent.login(account.bluesky)
-
+    const agent = await createAuthenticatedAgent(account.bluesky)
     const accessJwt = agent.session.accessJwt
 
     // Build facets for clickable links (same as regular post)
@@ -416,11 +356,7 @@ async function sendStatus(account, statusData, edit) {
 
       // Bluesky
       if (account.bluesky) {
-        const agent = new BskyAgent({
-          service: account.bluesky.service || 'https://bsky.social'
-        })
-
-        await agent.login(account.bluesky)
+        const agent = await createAuthenticatedAgent(account.bluesky)
 
         const imageData = fs.readFileSync(screenshot)
         const uploadResult = await agent.uploadBlob(imageData, {
