@@ -584,6 +584,7 @@
             alert('✓ Posted to all platforms successfully!')
           } else {
             alert(data.message)
+            buttons.forEach(btn => btn.disabled = false)
             loadDrafts() // Refresh to show updated state
           }
         } else {
