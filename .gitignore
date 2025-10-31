@@ -3,6 +3,7 @@ config.json
 node_modules
 .claude/
 CLAUDE.md
+REFACTORING_INVESTIGATION.md
 docs/pii-screening/
 pii-blocks.log
 *.png

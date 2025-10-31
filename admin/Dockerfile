@@ -1,6 +1,7 @@
 FROM node:20-slim
 
-WORKDIR /opt/sfedits-admin
+# Match local directory structure: /opt/sfedits/admin/server.js with lib at /opt/sfedits/lib
+WORKDIR /opt/sfedits/admin
 
 # Install system dependencies for Puppeteer
 RUN apt-get update && apt-get install -y \
@@ -30,8 +31,9 @@ RUN npm install --production
 COPY admin/server.js ./
 COPY admin/public ./public
 
-# Copy shared modules from parent directory
-COPY lib ./lib
+# Copy shared modules to parent directory to match local structure
+# server.js uses require('../lib/...') so lib must be at /opt/sfedits/lib
+COPY lib ../lib/
 
 # Expose admin port
 EXPOSE 3000

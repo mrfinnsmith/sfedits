@@ -8,11 +8,12 @@ const Mustache = require('mustache')
 const { WikiChanges } = require('wikichanges')
 const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
-const { buildMastodonText } = require('./lib/html-utils')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
 const { takeScreenshot } = require('./lib/screenshot')
 const { buildFacets } = require('./lib/bluesky-utils')
 const { createAuthenticatedAgent } = require('./lib/bluesky-client')
+const bluesky = require('./lib/bluesky-platform')
+const mastodon = require('./lib/mastodon-platform')
 
 const argv = minimist(process.argv.slice(2), {
   default: {
@@ -347,6 +348,7 @@ async function sendStatus(account, statusData, edit) {
       // Enrich IP addresses with country flags
       const enrichedText = await enrichIPsInText(statusData.text)
 
+      // Wait for Wikipedia diff table to fully render
       await new Promise(r => setTimeout(r, 2000));
       const screenshot = await takeScreenshot(edit.url)
 
@@ -354,65 +356,40 @@ async function sendStatus(account, statusData, edit) {
         throw new Error('Failed to capture screenshot')
       }
 
-      // Bluesky
-      if (account.bluesky) {
-        const agent = await createAuthenticatedAgent(account.bluesky)
+      try {
+        // Prepare metadata for posting
+        const metadata = {
+          page: edit.page,
+          name: statusData.name,
+          pageUrl: statusData.pageUrl,
+          userUrl: statusData.userUrl
+        }
 
-        const imageData = fs.readFileSync(screenshot)
-        const uploadResult = await agent.uploadBlob(imageData, {
-          encoding: 'image/png'
-        })
+        // Post to Bluesky
+        if (account.bluesky) {
+          await bluesky.post({
+            account: account.bluesky,
+            text: enrichedText,
+            screenshot,
+            metadata
+          })
+        }
 
-        const facets = buildFacets(
-          enrichedText,
-          statusData.page,
-          statusData.name,
-          statusData.pageUrl,
-          statusData.userUrl
-        )
-
-        await agent.post({
-          text: enrichedText,
-          facets: facets,
-          embed: {
-            $type: 'app.bsky.embed.images',
-            images: [{
-              alt: `Screenshot of edit to ${edit.page}`,
-              image: uploadResult.data.blob
-            }]
-          },
-          createdAt: new Date().toISOString()
-        })
+        // Post to Mastodon
+        if (account.mastodon) {
+          await mastodon.post({
+            account: account.mastodon,
+            text: enrichedText,
+            screenshot,
+            metadata
+          })
+        }
+      } finally {
+        // Always clean up screenshot, even if posting fails
+        if (screenshot && fs.existsSync(screenshot)) {
+          fs.unlinkSync(screenshot)
+        }
       }
-
-      // Mastodon
-      if (account.mastodon) {
-        const M = new Mastodon({
-          access_token: account.mastodon.access_token,
-          api_url: account.mastodon.instance + '/api/v1/'
-        })
-
-        const imageData = fs.createReadStream(screenshot)
-        const mediaData = await M.post('media', {
-          file: imageData,
-          description: `Screenshot of edit to ${edit.page}`
-        })
-
-        const mastodonText = buildMastodonText(
-          enrichedText,
-          statusData.page,
-          statusData.name,
-          statusData.pageUrl,
-          statusData.userUrl
-        )
-
-        await M.post('statuses', {
-          status: mastodonText,
-          media_ids: [mediaData.data.id]
-        })
-      }
-
-      fs.unlinkSync(screenshot)
     }
   } catch (error) {
     console.error('Posting failed:', error)

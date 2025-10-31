@@ -4,11 +4,9 @@ const express = require('express')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
-const Mastodon = require('mastodon')
-const { buildMastodonText } = require('../lib/html-utils')
 const { takeScreenshot } = require('../lib/screenshot')
-const { buildFacets } = require('../lib/bluesky-utils')
-const { createAuthenticatedAgent } = require('../lib/bluesky-client')
+const bluesky = require('../lib/bluesky-platform')
+const mastodon = require('../lib/mastodon-platform')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -240,97 +238,61 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
       throw new Error('Failed to capture screenshot')
     }
 
-    // Post to Bluesky if configured and not already posted
-    if (account.bluesky && !postedTo.includes('bluesky')) {
-      try {
-        const agent = await createAuthenticatedAgent(account.bluesky)
-
-        const facets = buildFacets(
-          draft.text,
-          draft.status_data.page,
-          draft.status_data.name,
-          draft.status_data.pageUrl,
-          draft.status_data.userUrl
-        )
-
-        const postData = {
-          text: draft.text,
-          facets: facets,
-          createdAt: new Date().toISOString()
-        }
-
-        if (screenshot && fs.existsSync(screenshot)) {
-          const imageData = fs.readFileSync(screenshot)
-          const uploadResult = await agent.uploadBlob(imageData, {
-            encoding: 'image/png'
-          })
-          postData.embed = {
-            $type: 'app.bsky.embed.images',
-            images: [{
-              alt: `Screenshot of edit to ${draft.article}`,
-              image: uploadResult.data.blob
-            }]
-          }
-        }
-
-        await agent.post(postData)
-
-        console.log(`✓ Posted to Bluesky`)
-        postedTo.push('bluesky')
-        results.push({ platform: 'bluesky', success: true })
-      } catch (error) {
-        console.error(`✗ Bluesky failed:`, error.message)
-        results.push({ platform: 'bluesky', success: false, error: error.message })
+    try {
+      // Prepare metadata for posting
+      const metadata = {
+        page: draft.article,
+        name: draft.status_data.name,
+        pageUrl: draft.status_data.pageUrl,
+        userUrl: draft.status_data.userUrl
       }
-    } else if (postedTo.includes('bluesky')) {
-      results.push({ platform: 'bluesky', success: true, skipped: true })
-    }
 
-    // Post to Mastodon if configured and not already posted
-    if (account.mastodon && !postedTo.includes('mastodon')) {
-      try {
-        const M = new Mastodon({
-          access_token: account.mastodon.access_token,
-          api_url: account.mastodon.instance + '/api/v1/'
-        })
-
-        const mastodonText = buildMastodonText(
-          draft.text,
-          draft.status_data.page,
-          draft.status_data.name,
-          draft.status_data.pageUrl,
-          draft.status_data.userUrl
-        )
-
-        const postData = {
-          status: mastodonText
-        }
-
-        if (screenshot && fs.existsSync(screenshot)) {
-          const imageData = fs.createReadStream(screenshot)
-          const mediaData = await M.post('media', {
-            file: imageData,
-            description: `Screenshot of edit to ${draft.article}`
+      // Post to Bluesky if configured and not already posted
+      if (account.bluesky && !postedTo.includes('bluesky')) {
+        try {
+          await bluesky.post({
+            account: account.bluesky,
+            text: draft.text,
+            screenshot,
+            metadata
           })
-          postData.media_ids = [mediaData.data.id]
+
+          console.log(`✓ Posted to Bluesky`)
+          postedTo.push('bluesky')
+          results.push({ platform: 'bluesky', success: true })
+        } catch (error) {
+          console.error(`✗ Bluesky failed:`, error.message)
+          results.push({ platform: 'bluesky', success: false, error: error.message })
         }
-
-        await M.post('statuses', postData)
-
-        console.log(`✓ Posted to Mastodon`)
-        postedTo.push('mastodon')
-        results.push({ platform: 'mastodon', success: true })
-      } catch (error) {
-        console.error(`✗ Mastodon failed:`, error.message)
-        results.push({ platform: 'mastodon', success: false, error: error.message })
+      } else if (postedTo.includes('bluesky')) {
+        results.push({ platform: 'bluesky', success: true, skipped: true })
       }
-    } else if (postedTo.includes('mastodon')) {
-      results.push({ platform: 'mastodon', success: true, skipped: true })
-    }
 
-    // Clean up screenshot
-    if (screenshot && fs.existsSync(screenshot)) {
-      fs.unlinkSync(screenshot)
+      // Post to Mastodon if configured and not already posted
+      if (account.mastodon && !postedTo.includes('mastodon')) {
+        try {
+          await mastodon.post({
+            account: account.mastodon,
+            text: draft.text,
+            screenshot,
+            metadata
+          })
+
+          console.log(`✓ Posted to Mastodon`)
+          postedTo.push('mastodon')
+          results.push({ platform: 'mastodon', success: true })
+        } catch (error) {
+          console.error(`✗ Mastodon failed:`, error.message)
+          results.push({ platform: 'mastodon', success: false, error: error.message })
+        }
+      } else if (postedTo.includes('mastodon')) {
+        results.push({ platform: 'mastodon', success: true, skipped: true })
+      }
+    } finally {
+      // Always clean up screenshot, even if posting fails
+      if (screenshot && fs.existsSync(screenshot)) {
+        fs.unlinkSync(screenshot)
+      }
     }
 
     // Update draft with posted platforms

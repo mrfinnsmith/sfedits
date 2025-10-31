@@ -321,9 +321,9 @@ npm test  # Run all tests (~3 seconds)
 ```
 
 **Test suite:**
-- **41 passing tests** covering posting flow, text transformations, and URL helpers
+- **72 passing tests** covering posting flow, text transformations, and URL helpers
 - **Integration test** that mocks Bluesky/Mastodon APIs and validates end-to-end posting
-- **Unit tests** for text pipeline, geolocation, facet building, and URL generation
+- **Unit tests** for platform modules, text pipeline, geolocation, facet building, and URL generation
 
 Tests use:
 - `mocha` + `chai` for test framework and assertions
