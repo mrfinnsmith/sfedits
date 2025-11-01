@@ -233,6 +233,9 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
     const results = []
     const postedTo = draft.posted_to || []
 
+    // Wait for Wikipedia diff table to fully render (same delay as bot)
+    await new Promise(r => setTimeout(r, 2000))
+
     // Take screenshot for posting (admin console doesn't save it in draft)
     const screenshot = await takeScreenshot(draft.diff_url)
     if (!screenshot) {
