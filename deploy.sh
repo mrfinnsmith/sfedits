@@ -24,10 +24,17 @@ ssh root@$DROPLET_IP << 'EOF'
   set -e
   cd /root/sfedits
 
-  echo "=== Aggressive Docker cleanup (ALWAYS FIRST) ==="
-  # ALWAYS cleanup before build - don't wait for disk to hit 90%
-  # Failed builds leave partial images that consume space
+  echo "=== Stopping containers before cleanup ==="
+  # Stop containers FIRST so their images can be removed by prune
+  docker-compose down || true
+
+  echo ""
+  echo "=== Aggressive Docker cleanup ==="
+  # Now cleanup can remove all unused images (not blocked by running containers)
   docker system prune -af
+
+  # Also remove any dangling build containers
+  docker ps -a -q -f status=exited | xargs -r docker rm -f 2>/dev/null || true
 
   echo ""
   echo "=== Pre-deployment checks ==="
