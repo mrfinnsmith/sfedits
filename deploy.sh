@@ -24,13 +24,22 @@ ssh root@$DROPLET_IP << 'EOF'
   set -e
   cd /root/sfedits
 
+  echo "=== Aggressive Docker cleanup (ALWAYS FIRST) ==="
+  # ALWAYS cleanup before build - don't wait for disk to hit 90%
+  # Failed builds leave partial images that consume space
+  docker system prune -af
+
+  echo ""
   echo "=== Pre-deployment checks ==="
 
-  # Check disk space
+  # Check disk space after cleanup
   DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
-  if [ "$DISK_USAGE" -gt 90 ]; then
-    echo "WARNING: Disk usage at ${DISK_USAGE}% - running aggressive cleanup"
-    docker system prune -af --volumes
+  echo "Disk usage after cleanup: ${DISK_USAGE}%"
+
+  if [ "$DISK_USAGE" -gt 85 ]; then
+    echo "ERROR: Disk usage still at ${DISK_USAGE}% after cleanup"
+    echo "Manual cleanup required - cannot proceed with build"
+    exit 1
   fi
 
   # Check memory
@@ -46,11 +55,6 @@ ssh root@$DROPLET_IP << 'EOF'
   echo "=== Pulling latest code ==="
   git fetch origin
   git reset --hard origin/main
-
-  echo ""
-  echo "=== Aggressive Docker cleanup ==="
-  # Remove ALL unused images, containers, networks, and build cache
-  docker system prune -af
 
   # Show reclaimed space
   echo ""
