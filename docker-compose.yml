@@ -41,9 +41,9 @@ services:
     depends_on:
       pii-service:
         condition: service_healthy
-    # Memory limits for admin web UI
-    mem_limit: 128m
-    mem_reservation: 64m
+    # Memory limits for admin web UI (needs 256MB for Puppeteer/Chromium)
+    mem_limit: 256m
+    mem_reservation: 128m
 
   maxmind-updater:
     image: curlimages/curl:latest
