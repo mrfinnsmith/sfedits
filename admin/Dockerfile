@@ -1,7 +1,7 @@
 FROM node:20-slim
 
-# Match local directory structure: /opt/sfedits/admin/server.js with lib at /opt/sfedits/lib
-WORKDIR /opt/sfedits/admin
+# Use root as base directory
+WORKDIR /opt/sfedits
 
 # Install system dependencies for Puppeteer
 RUN apt-get update && apt-get install -y \
@@ -21,21 +21,21 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Copy admin package files
-COPY admin/package*.json ./
+# Use root package.json (same as bot)
+# This ensures lib/ can access all dependencies
+COPY package*.json ./
+RUN npm ci --only=production
 
-# Install dependencies
-RUN npm install --production
+# Copy shared lib first
+COPY lib ./lib/
 
-# Copy admin server and public files
-COPY admin/server.js ./
-COPY admin/public ./public
+# Copy admin files
+COPY admin/server.js ./admin/
+COPY admin/public ./admin/public/
 
-# Copy shared modules to parent directory to match local structure
-# server.js uses require('../lib/...') so lib must be at /opt/sfedits/lib
-COPY lib ../lib/
+# Run admin server from admin directory
+WORKDIR /opt/sfedits/admin
 
-# Expose admin port
 EXPOSE 3000
 
 CMD ["node", "server.js"]
