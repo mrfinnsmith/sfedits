@@ -34,16 +34,17 @@ ssh root@$DROPLET_IP << 'EOF'
 
   echo ""
   echo "=== Stopping containers before Docker cleanup ==="
-  # Stop containers FIRST so their images can be removed by prune
+  # Stop compose services
   docker-compose down || true
+
+  # Also stop and remove ANY other containers (failed builds, etc)
+  docker stop $(docker ps -a -q) 2>/dev/null || true
+  docker rm $(docker ps -a -q) 2>/dev/null || true
 
   echo ""
   echo "=== Aggressive Docker cleanup ==="
   # Now cleanup can remove all unused images (not blocked by running containers)
-  docker system prune -af
-
-  # Also remove any dangling build containers
-  docker ps -a -q -f status=exited | xargs -r docker rm -f 2>/dev/null || true
+  docker system prune -af --volumes
 
   echo ""
   echo "=== Pre-deployment checks ==="
