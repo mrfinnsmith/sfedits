@@ -24,27 +24,41 @@ ssh root@$DROPLET_IP << 'EOF'
   set -e
   cd /root/sfedits
 
-  echo "=== System cleanup ==="
+  echo "=== Comprehensive cleanup ==="
 
-  # Clean apt cache (~400MB)
-  apt-get clean
-
-  # Clean journal logs older than 3 days (~500MB)
-  journalctl --vacuum-time=3d
-
-  echo ""
-  echo "=== Stopping containers before Docker cleanup ==="
-  # Stop compose services
+  # Stop ALL containers first (compose + any strays)
+  echo "Stopping all containers..."
   docker-compose down || true
-
-  # Also stop and remove ANY other containers (failed builds, etc)
   docker stop $(docker ps -a -q) 2>/dev/null || true
-  docker rm $(docker ps -a -q) 2>/dev/null || true
+  docker rm -f $(docker ps -a -q) 2>/dev/null || true
 
-  echo ""
-  echo "=== Aggressive Docker cleanup ==="
-  # Now cleanup can remove all unused images (not blocked by running containers)
+  # Remove ALL Docker resources
+  echo "Cleaning Docker..."
   docker system prune -af --volumes
+  docker image prune -af
+  docker builder prune -af
+
+  # Clean apt cache and archives (~400MB)
+  echo "Cleaning apt..."
+  apt-get clean
+  rm -rf /var/cache/apt/archives/*.deb
+  rm -rf /var/cache/apt/archives/partial/*.deb
+  apt-get autoclean
+  apt-get autoremove -y
+
+  # Clean logs aggressively
+  echo "Cleaning logs..."
+  journalctl --vacuum-time=2d
+  find /var/log -type f -name "*.log" -mtime +7 -delete
+  find /var/log -type f -name "*.gz" -delete
+  find /var/log -type f -name "*.old" -delete
+
+  # Clean tmp
+  rm -rf /tmp/*
+
+  # Show space after cleanup
+  echo ""
+  df -h / | grep -v Filesystem
 
   echo ""
   echo "=== Pre-deployment checks ==="
