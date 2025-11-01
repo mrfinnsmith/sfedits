@@ -63,16 +63,23 @@ ssh root@$DROPLET_IP << 'EOF'
   echo ""
   echo "=== Building services sequentially to avoid OOM ==="
 
-  # Build services one at a time with memory limits
-  # PII service uses cached layers (Python base image)
+  # Build and remove old images one at a time to minimize peak disk usage
+  # This prevents having both old and new images for all services simultaneously
+
   echo "Building pii-service..."
   docker-compose build pii-service
+  # Remove old pii-service image if it exists
+  docker images | grep sfedits_pii-service | grep -v latest | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
 
   echo "Building bot..."
   docker-compose build bot
+  # Remove old bot image if it exists
+  docker images | grep sfedits_bot | grep -v latest | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
 
   echo "Building admin..."
   docker-compose build admin
+  # Remove old admin image if it exists
+  docker images | grep sfedits_admin | grep -v latest | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
 
   echo ""
   echo "=== Stopping existing containers ==="
