@@ -24,7 +24,16 @@ ssh root@$DROPLET_IP << 'EOF'
   set -e
   cd /root/sfedits
 
-  echo "=== Stopping containers before cleanup ==="
+  echo "=== System cleanup ==="
+
+  # Clean apt cache (~400MB)
+  apt-get clean
+
+  # Clean journal logs older than 3 days (~500MB)
+  journalctl --vacuum-time=3d
+
+  echo ""
+  echo "=== Stopping containers before Docker cleanup ==="
   # Stop containers FIRST so their images can be removed by prune
   docker-compose down || true
 
