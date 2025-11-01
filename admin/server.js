@@ -5,6 +5,7 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const { takeScreenshot } = require('../lib/screenshot')
+const { createAuthenticatedAgent } = require('../lib/bluesky-client')
 const bluesky = require('../lib/bluesky-platform')
 const mastodon = require('../lib/mastodon-platform')
 
@@ -357,8 +358,12 @@ app.get('/screenshots/:filename', requireAuth, (req, res) => {
 })
 
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Admin server running on port ${PORT}`)
-  console.log(`Passwordless authentication via Bluesky DM enabled`)
-})
+// Start server only if run directly (not when imported by tests)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Admin server running on port ${PORT}`)
+    console.log(`Passwordless authentication via Bluesky DM enabled`)
+  })
+}
+
+module.exports = app

@@ -1,0 +1,20 @@
+#!/bin/bash
+# Pre-commit hook - prevents committing broken code
+# Runs tests that catch import errors like commit 9330e41
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+echo ""
+
+# Run test suite (includes admin import verification)
+echo "📋 Running tests..."
+if ! npm test; then
+  echo ""
+  echo "❌ Tests failed. Fix them before committing."
+  exit 1
+fi
+
+echo ""
+echo "✅ Pre-commit checks passed!"
+exit 0

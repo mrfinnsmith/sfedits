@@ -33,10 +33,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - CONFIG_PATH=/opt/sfedits-admin/config.json
+      - CONFIG_PATH=/opt/sfedits/config.json
     volumes:
-      - ./config.json:/opt/sfedits-admin/config.json:ro
-      - ./drafts:/opt/sfedits-admin/drafts
+      - ./config.json:/opt/sfedits/config.json:ro
+      - ./drafts:/opt/sfedits/drafts
     restart: unless-stopped
     depends_on:
       pii-service:
