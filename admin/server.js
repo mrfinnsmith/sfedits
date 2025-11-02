@@ -237,9 +237,29 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
     await new Promise(r => setTimeout(r, 2000))
 
     // Take screenshot for posting (admin console doesn't save it in draft)
-    const screenshot = await takeScreenshot(draft.diff_url)
+    // Wrap in timeout to prevent hanging if diff URL is stale/invalid
+    const SCREENSHOT_TIMEOUT = 35000 // 35 seconds (less than Puppeteer's 60s timeout)
+    let screenshot = null
+    try {
+      screenshot = await Promise.race([
+        takeScreenshot(draft.diff_url),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Screenshot timeout')), SCREENSHOT_TIMEOUT)
+        )
+      ])
+    } catch (error) {
+      console.error(`Screenshot failed for ${draft.diff_url}:`, error.message)
+      return res.status(500).json({ 
+        error: 'Failed to capture screenshot', 
+        details: `Screenshot failed: ${error.message}. The diff URL may be stale or invalid.`
+      })
+    }
+
     if (!screenshot) {
-      throw new Error('Failed to capture screenshot')
+      return res.status(500).json({ 
+        error: 'Failed to capture screenshot', 
+        details: 'Screenshot returned null. The diff URL may be stale or invalid.'
+      })
     }
 
     try {
