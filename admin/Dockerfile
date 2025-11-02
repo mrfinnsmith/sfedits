@@ -33,9 +33,6 @@ COPY lib ./lib/
 COPY admin/server.js ./admin/
 COPY admin/public ./admin/public/
 
-# Run admin server from admin directory
-WORKDIR /opt/sfedits/admin
-
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["node", "admin/server.js"]
