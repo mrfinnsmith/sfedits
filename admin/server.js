@@ -258,7 +258,7 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
 
       try {
         const page = await browser.newPage()
-        await page.setViewport({ width: 1200, height: 800 })
+        // NO setViewport call at all - let Chromium auto-size
         await page.goto(draft.diff_url, { waitUntil: 'networkidle0' })
 
         const element = await page.$('table.diff.diff-type-table.diff-contentalign-left')
@@ -270,12 +270,13 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
           })
           screenshot = filename
         }
+
       } finally {
         await browser.close()
       }
     } catch (error) {
       console.error('Failed to take screenshot:', error.message)
-      // Continue without screenshot rather than failing entire post
+      throw new Error('Failed to capture screenshot')
     }
 
     // Post to Bluesky if configured and not already posted
