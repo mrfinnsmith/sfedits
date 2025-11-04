@@ -22,7 +22,7 @@
     "node": ">=6"
   },
   "scripts": {
-    "test": "mocha --colors --reporter spec test.js",
+    "test": "mocha --colors --reporter spec 'test/**/*.js'",
     "start": "node page-watch.js",
     "mastodon": "node utils/mastodon.js"
   }
