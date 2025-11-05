@@ -1,9 +1,16 @@
+x-logging: &default-logging
+  driver: "local"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   pii-service:
     build: ./pii-service
     restart: unless-stopped
     mem_limit: 256m
     mem_reservation: 128m
+    logging: *default-logging
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 10s
@@ -23,6 +30,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     mem_reservation: 128m
+    logging: *default-logging
 
   admin:
     build:
@@ -41,6 +49,7 @@ services:
         condition: service_healthy
     mem_limit: 256m
     mem_reservation: 128m
+    logging: *default-logging
 
   maxmind-updater:
     image: curlimages/curl:latest
@@ -51,3 +60,4 @@ services:
     restart: unless-stopped
     mem_limit: 64m
     mem_reservation: 32m
+    logging: *default-logging
