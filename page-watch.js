@@ -228,8 +228,9 @@ async function sendBlueskyAlert(account, edit, statusData, piiResult, screenshot
 
     // Upload screenshot
     const imageData = fs.readFileSync(screenshot)
+    const encoding = screenshot.endsWith('.jpg') ? 'image/jpeg' : 'image/png'
     const uploadResult = await agent.uploadBlob(imageData, {
-      encoding: 'image/png'
+      encoding: encoding
     })
 
     // Build facets for clickable links (same as regular post)
@@ -410,9 +411,8 @@ function getStatus(edit, name, template) {
 const lastChange = {}
 
 async function takeScreenshot(url) {
-
-  // write the screenshot to this file
-  const filename = Date.now() + '.png'
+  const BLUESKY_SIZE_LIMIT = 976560 // 976.56KB in bytes
+  const timestamp = Date.now()
 
   const browser = await puppeteer.launch({
     args: [
@@ -436,12 +436,26 @@ async function takeScreenshot(url) {
     const element = await page.$('table.diff.diff-type-table.diff-contentalign-left');
     const box = await element.boundingBox();
 
+    // Take PNG screenshot to buffer (memory only, don't save to disk yet)
+    const pngBuffer = await page.screenshot({ clip: box });
+
+    // If under Bluesky's limit, save PNG
+    if (pngBuffer.length <= BLUESKY_SIZE_LIMIT) {
+      const pngFilename = timestamp + '.png'
+      fs.writeFileSync(pngFilename, pngBuffer);
+      return pngFilename
+    }
+
+    // PNG too large - take JPEG instead (directly to disk)
+    const jpegFilename = timestamp + '.jpg'
     await page.screenshot({
-      path: filename,
+      path: jpegFilename,
+      type: 'jpeg',
+      quality: 30,
       clip: box
     });
 
-    return filename
+    return jpegFilename
   } finally {
     // Always close browser, even if there's an error
     await browser.close()
@@ -473,8 +487,9 @@ async function sendStatus(account, statusData, edit) {
         await agent.login(account.bluesky)
 
         const imageData = fs.readFileSync(screenshot)
+        const encoding = screenshot.endsWith('.jpg') ? 'image/jpeg' : 'image/png'
         const uploadResult = await agent.uploadBlob(imageData, {
-          encoding: 'image/png'
+          encoding: encoding
         })
 
         const facets = buildFacets(

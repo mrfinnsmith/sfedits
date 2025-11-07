@@ -247,8 +247,9 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
         await agent.login(account.bluesky)
 
         const imageData = fs.readFileSync(screenshotPath)
+        const encoding = screenshotPath.endsWith('.jpg') ? 'image/jpeg' : 'image/png'
         const uploadResult = await agent.uploadBlob(imageData, {
-          encoding: 'image/png'
+          encoding: encoding
         })
 
         const facets = buildFacets(
