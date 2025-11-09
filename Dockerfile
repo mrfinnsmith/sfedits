@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libnss3-dev \
     libxss-dev \
     fonts-liberation \
+    fonts-noto-cjk \
     xvfb \
     python3 \
     python3-pip \
