@@ -38,8 +38,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip3 install --no-cache-dir \
     presidio-analyzer==2.2.360 \
     spacy>=3.4.4 \
-    && python3 -m spacy download en_core_web_sm \
-    && python3 -m spacy download en_core_web_lg
+    && python3 -m spacy download en_core_web_sm
 
 EXPOSE 3000
 

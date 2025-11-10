@@ -14,6 +14,7 @@ Returns JSON with detection results.
 import sys
 import json
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
+from presidio_analyzer.nlp_engine import NlpEngineProvider
 
 
 def create_custom_ssn_recognizer():
@@ -69,8 +70,18 @@ def analyze_text_for_pii(text):
             'entities': [{type, text, score}, ...]
         }
     """
+    # Configure NLP engine to use small spaCy model (for low-memory environments)
+    configuration = {
+        "nlp_engine_name": "spacy",
+        "models": [
+            {"lang_code": "en", "model_name": "en_core_web_sm"}
+        ],
+    }
+    provider = NlpEngineProvider(nlp_configuration=configuration)
+    nlp_engine = provider.create_engine()
+
     # Initialize analyzer with custom SSN recognizer
-    analyzer = AnalyzerEngine()
+    analyzer = AnalyzerEngine(nlp_engine=nlp_engine)
     custom_ssn = create_custom_ssn_recognizer()
     analyzer.registry.add_recognizer(custom_ssn)
 
