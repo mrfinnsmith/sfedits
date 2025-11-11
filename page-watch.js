@@ -433,7 +433,10 @@ async function takeScreenshot(url) {
     await page.goto(url, { waitUntil: 'networkidle0' })
 
     // get the diff portion of the page
-    const element = await page.$('table.diff.diff-type-table.diff-contentalign-left');
+    const element = await page.$('table.diff.diff-type-table');
+    if (!element) {
+      throw new Error('Could not find diff table on page');
+    }
     const box = await element.boundingBox();
 
     // Take PNG screenshot to buffer (memory only, don't save to disk yet)
