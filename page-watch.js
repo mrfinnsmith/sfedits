@@ -393,7 +393,6 @@ async function sendStatus(account, statusData, edit) {
     }
   } catch (error) {
     console.error('Posting failed:', error)
-    throw error // Preserve stack trace
   }
 }
 
@@ -402,7 +401,11 @@ async function inspect(account, edit) {
     if (account.watchlist && account.watchlist[edit.wikipedia]
       && account.watchlist[edit.wikipedia][edit.page]) {
       const statusData = getStatus(edit, edit.user, account.template)
-      await sendStatus(account, statusData, edit)
+      try {
+        await sendStatus(account, statusData, edit)
+      } catch (error) {
+        console.error('Failed to process edit:', edit.page, error.message)
+      }
     }
   }
 }
@@ -439,6 +442,14 @@ async function main() {
 }
 
 if (require.main === module) {
+  // Prevent unhandled errors from crashing the process
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception (continuing):', error)
+  })
+  process.on('unhandledRejection', (error) => {
+    console.error('Unhandled rejection (continuing):', error)
+  })
+
   main().catch(error => {
     console.error('Fatal error:', error)
     process.exit(1)
