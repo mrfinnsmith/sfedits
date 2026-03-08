@@ -15,12 +15,23 @@ const { createAuthenticatedAgent } = require('./lib/bluesky-client')
 const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
 
+const path = require('path')
+
 const argv = minimist(process.argv.slice(2), {
   default: {
     verbose: false,
     config: './config.json'
   }
 })
+
+const HEARTBEAT_DIR = path.join(__dirname, 'data')
+function writeHeartbeat(name) {
+  try {
+    fs.writeFileSync(path.join(HEARTBEAT_DIR, `heartbeat-${name}`), Date.now().toString())
+  } catch (e) {
+    // Non-fatal: data dir may not exist in test
+  }
+}
 
 function getConfig(path) {
   const config = loadJson(path)
@@ -384,6 +395,8 @@ async function sendStatus(account, statusData, edit) {
             metadata
           })
         }
+
+        writeHeartbeat('post')
       } finally {
         // Always clean up screenshot, even if posting fails
         if (screenshot && fs.existsSync(screenshot)) {
@@ -428,6 +441,7 @@ async function main() {
     if (!err) {
       const wikipedia = new WikiChanges({ ircNickname: config.nick })
       return wikipedia.listen(edit => {
+        writeHeartbeat('irc')
         if (argv.verbose) {
           console.log(JSON.stringify(edit))
         }
