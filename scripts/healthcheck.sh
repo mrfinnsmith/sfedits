@@ -1,25 +1,21 @@
 #!/bin/bash
-# Check that all expected sfedits containers are running.
-# Sends DMs via Bluesky and Mastodon if any are down.
+# Check that the sfedits bot container is running.
+# Sends DMs via Bluesky and Mastodon if it's down.
 #
 # Install: add to crontab on the droplet
 #   */30 * * * * /root/sfedits/scripts/healthcheck.sh >> /var/log/sfedits-healthcheck.log 2>&1
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-EXPECTED_CONTAINERS="sfedits-bot"
-MISSING=""
 
-for container in $EXPECTED_CONTAINERS; do
-  if ! docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
-    MISSING="$MISSING $container"
-  fi
-done
+# Check for bot container under any naming convention
+# docker-compose uses sfedits_bot_1, standalone uses sfedits-bot
+BOT_RUNNING=$(docker ps --format '{{.Names}}' | grep -E 'sfedits.bot')
 
-if [ -n "$MISSING" ]; then
-  echo "[$(date)] ALERT: containers down:$MISSING"
-  node "$SCRIPT_DIR/send-alert.js" "sfedits healthcheck: containers down:$MISSING"
+if [ -z "$BOT_RUNNING" ]; then
+  echo "[$(date)] ALERT: bot container is not running"
+  node "$SCRIPT_DIR/send-alert.js" "sfedits healthcheck: bot container is not running"
   exit 1
 else
-  echo "[$(date)] OK: all containers running"
+  echo "[$(date)] OK: $BOT_RUNNING"
   exit 0
 fi
