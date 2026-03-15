@@ -14,6 +14,7 @@ const { buildFacets } = require('./lib/bluesky-utils')
 const { createAuthenticatedAgent } = require('./lib/bluesky-client')
 const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
+const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 
 const path = require('path')
 
@@ -289,9 +290,20 @@ async function screenForPII(account, edit, statusData) {
     const piiResult = await analyzeForPII(diffText, blockedTypes)
 
     if (piiResult.has_pii) {
-      console.error('🚫 PII DETECTED - Blocking post')
+      console.error('⚠ Presidio flagged PII - verifying with Gemini...')
       console.error(`   Article: ${edit.page}`)
       console.error(`   Detected: ${piiResult.entities.map(e => e.type).join(', ')}`)
+
+      // Second check: ask Gemini if this is real PII
+      // 'false_positive' = safe to post, 'confirmed' = real PII, 'unavailable' = fall back to blocking
+      const geminiVerdict = await verifyPIIWithGemini(diffText, piiResult.entities)
+      if (geminiVerdict === 'false_positive') {
+        console.log('✓ Gemini says false positive - allowing post through')
+        return { safe: true }
+      }
+
+      const reason = geminiVerdict === 'confirmed' ? 'PII confirmed by Gemini' : 'Gemini unavailable, blocking as precaution'
+      console.error(`🚫 Blocking post - ${reason}`)
 
       // Get PII types and max confidence
       const piiTypes = [...new Set(piiResult.entities.map(e => e.type))]
