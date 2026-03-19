@@ -39,6 +39,7 @@ services:
     volumes:
       - ./config.json:/opt/sfedits/config.json:ro
       - ./drafts:/opt/sfedits/drafts
+      - ./data:/opt/sfedits/data
     restart: unless-stopped
     depends_on:
       pii-service:
