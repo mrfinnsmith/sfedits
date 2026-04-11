@@ -433,6 +433,69 @@
     .verdict-badge.confirmed { background: #dc3545; color: white; }
     .verdict-badge.unavailable { background: #ffc107; color: #333; }
 
+    .bulk-bar {
+      background: #e8f0fe;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .bulk-bar label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .bulk-bar input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+    }
+
+    .bulk-count {
+      font-size: 13px;
+      color: #555;
+      margin-left: auto;
+    }
+
+    .bulk-btn {
+      padding: 5px 14px;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .bulk-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .bulk-btn.post { background: #28a745; }
+    .bulk-btn.post:hover:not(:disabled) { background: #218838; }
+    .bulk-btn.delete { background: #dc3545; }
+    .bulk-btn.delete:hover:not(:disabled) { background: #c82333; }
+
+    .draft-card-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .draft-checkbox {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
     @media (max-width: 768px) {
       .container {
         padding: 10px;
@@ -498,6 +561,14 @@
       </div>
 
       <div id="draftsTab" class="tab-content active">
+        <div id="bulkBar" class="bulk-bar" style="display: none;">
+          <label>
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> Select All
+          </label>
+          <span id="bulkCount" class="bulk-count">0 selected</span>
+          <button class="bulk-btn post" id="bulkPostBtn" onclick="bulkPost()" disabled>Post Selected</button>
+          <button class="bulk-btn delete" id="bulkDeleteBtn" onclick="bulkDelete()" disabled>Delete Selected</button>
+        </div>
         <div id="loading" class="loading">Loading drafts...</div>
         <div id="emptyState" class="empty-state" style="display: none;">
           <h2>No pending drafts</h2>
@@ -664,10 +735,13 @@
         if (drafts.length === 0) {
           emptyEl.style.display = 'block'
           countEl.textContent = '0 drafts'
+          document.getElementById('bulkBar').style.display = 'none'
           return
         }
 
         countEl.textContent = `${drafts.length} draft${drafts.length === 1 ? '' : 's'}`
+        document.getElementById('bulkBar').style.display = drafts.length > 0 ? 'flex' : 'none'
+        document.getElementById('selectAll').checked = false
 
         drafts.forEach(draft => {
           const card = createDraftCard(draft)
@@ -693,21 +767,26 @@
       card.innerHTML = `
         ${screenshotUrl ? `<img class="draft-screenshot" src="${screenshotUrl}" alt="Screenshot" onclick="showModal('${screenshotUrl}')">` : ''}
         <div class="draft-content">
-          <div class="draft-meta">
-            <span>
-              <strong>${draft.article}</strong> edited by <strong>${draft.editor}</strong>
-            </span>
-            <span>${timeAgo}</span>
-          </div>
-          <div class="draft-text">${renderTextWithLinks(draft)}</div>
-          <div class="draft-pii">
-            <strong>PII Detected:</strong> ${draft.pii_detected.join(', ')}
-            (${Math.round(draft.pii_confidence * 100)}% confidence)
-          </div>
-          <div class="draft-actions">
-            <button class="btn btn-primary" onclick="window.open('${draft.diff_url}', '_blank')">View Diff</button>
-            <button class="btn btn-success" onclick="postDraft('${draft.id}')">Post</button>
-            <button class="btn btn-danger" onclick="deleteDraft('${draft.id}')">Delete</button>
+          <div class="draft-card-row">
+            <input type="checkbox" class="draft-checkbox" data-draft-id="${draft.id}" onchange="updateBulkState()">
+            <div style="flex: 1;">
+              <div class="draft-meta">
+                <span>
+                  <strong>${escapeHtml(draft.article)}</strong> edited by <strong>${escapeHtml(draft.editor)}</strong>
+                </span>
+                <span>${timeAgo}</span>
+              </div>
+              <div class="draft-text">${renderTextWithLinks(draft)}</div>
+              <div class="draft-pii">
+                <strong>PII Detected:</strong> ${escapeHtml(draft.pii_detected.join(', '))}
+                (${Math.round(draft.pii_confidence * 100)}% confidence)
+              </div>
+              <div class="draft-actions">
+                <button class="btn btn-primary" onclick="window.open('${escapeHtml(draft.diff_url)}', '_blank')">View Diff</button>
+                <button class="btn btn-success" onclick="postDraft('${draft.id}')">Post</button>
+                <button class="btn btn-danger" onclick="deleteDraft('${draft.id}')">Delete</button>
+              </div>
+            </div>
           </div>
         </div>
       `
@@ -940,6 +1019,96 @@
       return Object.entries(counts)
         .map(([type, count]) => count > 1 ? `${type} x${count}` : type)
         .join(', ')
+    }
+
+    function getSelectedIds() {
+      return Array.from(document.querySelectorAll('.draft-checkbox:checked'))
+        .map(cb => cb.dataset.draftId)
+    }
+
+    function updateBulkState() {
+      const checkboxes = document.querySelectorAll('.draft-checkbox')
+      const checked = document.querySelectorAll('.draft-checkbox:checked')
+      const count = checked.length
+
+      document.getElementById('bulkCount').textContent = `${count} selected`
+      document.getElementById('bulkPostBtn').disabled = count === 0
+      document.getElementById('bulkDeleteBtn').disabled = count === 0
+      document.getElementById('selectAll').checked = checkboxes.length > 0 && checked.length === checkboxes.length
+    }
+
+    function toggleSelectAll() {
+      const checked = document.getElementById('selectAll').checked
+      document.querySelectorAll('.draft-checkbox').forEach(cb => { cb.checked = checked })
+      updateBulkState()
+    }
+
+    async function bulkDelete() {
+      const ids = getSelectedIds()
+      if (ids.length === 0) return
+      if (!confirm(`Delete ${ids.length} draft${ids.length === 1 ? '' : 's'}?`)) return
+
+      document.getElementById('bulkDeleteBtn').disabled = true
+      document.getElementById('bulkPostBtn').disabled = true
+
+      try {
+        const response = await fetch('/api/drafts/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ids })
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+          loadDrafts()
+        } else {
+          alert('Failed to delete: ' + (data.error || 'Unknown error'))
+        }
+      } catch (error) {
+        alert('Failed to delete: ' + error.message)
+      }
+    }
+
+    async function bulkPost() {
+      const ids = getSelectedIds()
+      if (ids.length === 0) return
+      if (!confirm(`Post ${ids.length} draft${ids.length === 1 ? '' : 's'}? Each will be posted to all platforms.`)) return
+
+      document.getElementById('bulkPostBtn').disabled = true
+      document.getElementById('bulkDeleteBtn').disabled = true
+      document.getElementById('bulkPostBtn').textContent = 'Posting...'
+
+      let succeeded = 0
+      let failed = 0
+
+      for (const id of ids) {
+        try {
+          const response = await fetch(`/api/drafts/${id}/post`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          })
+
+          const data = await response.json()
+          if (response.ok && data.complete) {
+            succeeded++
+          } else {
+            failed++
+          }
+        } catch {
+          failed++
+        }
+      }
+
+      document.getElementById('bulkPostBtn').textContent = 'Post Selected'
+
+      let msg = `Posted ${succeeded} draft${succeeded === 1 ? '' : 's'}.`
+      if (failed > 0) msg += ` ${failed} failed.`
+      alert(msg)
+      loadDrafts()
     }
 
     function getTimeAgo(date) {
