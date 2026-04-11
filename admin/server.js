@@ -348,6 +348,41 @@ app.delete('/api/drafts/:id', requireAuth, (req, res) => {
 })
 
 /**
+ * POST /api/drafts/bulk-delete
+ * Delete multiple drafts at once
+ */
+app.post('/api/drafts/bulk-delete', requireAuth, (req, res) => {
+  try {
+    const { ids } = req.body
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array required' })
+    }
+
+    let deleted = 0
+    let failed = 0
+
+    for (const id of ids) {
+      try {
+        const draft = getDraft(id)
+        if (draft) {
+          deleteDraft(id)
+          deleted++
+        } else {
+          failed++
+        }
+      } catch {
+        failed++
+      }
+    }
+
+    res.json({ success: true, deleted, failed })
+  } catch (error) {
+    console.error('Error bulk deleting drafts:', error)
+    res.status(500).json({ error: 'Failed to delete drafts' })
+  }
+})
+
+/**
  * GET /api/gemini-log
  * Return parsed Gemini PII check log entries
  */
