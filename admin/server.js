@@ -348,6 +348,35 @@ app.delete('/api/drafts/:id', requireAuth, (req, res) => {
 })
 
 /**
+ * GET /api/gemini-log
+ * Return parsed Gemini PII check log entries
+ */
+app.get('/api/gemini-log', requireAuth, (req, res) => {
+  try {
+    const logPath = path.join(__dirname, '../data/gemini-pii-checks.log')
+
+    if (!fs.existsSync(logPath)) {
+      return res.json({ entries: [], count: 0 })
+    }
+
+    const raw = fs.readFileSync(logPath, 'utf8')
+    const entries = raw.split('\n')
+      .filter(Boolean)
+      .map(line => {
+        try { return JSON.parse(line) }
+        catch { return null }
+      })
+      .filter(Boolean)
+      .reverse() // newest first
+
+    res.json({ entries, count: entries.length })
+  } catch (error) {
+    console.error('Error reading gemini log:', error)
+    res.status(500).json({ error: 'Failed to read log' })
+  }
+})
+
+/**
  * GET /screenshots/:filename
  * Serve screenshots (requires auth)
  */
