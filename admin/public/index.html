@@ -984,7 +984,7 @@
         const timeStr = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
                         time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 
-        const article = extractArticleName(entry.postText || '')
+        const article = entry.articleName || extractArticleName(entry.postText || '')
         const entitySummary = summarizeEntities(entry.entities || [])
 
         const verdictClass = entry.status === 'false_positive' ? 'false-positive' :
@@ -1004,9 +1004,10 @@
     }
 
     function extractArticleName(postText) {
+      if (!postText) return 'Unknown'
       const match = postText.match(/^(.+?)\s+(?:Wikipedia article edited|edited)/)
       if (match) return match[1]
-      return postText.substring(0, 40) || 'Unknown'
+      return '(pre-fix entry)'
     }
 
     function summarizeEntities(entities) {

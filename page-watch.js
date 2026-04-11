@@ -296,7 +296,7 @@ async function screenForPII(account, edit, statusData) {
 
       // Second check: ask Gemini if this is real PII
       // 'false_positive' = safe to post, 'confirmed' = real PII, 'unavailable' = fall back to blocking
-      const geminiVerdict = await verifyPIIWithGemini(diffText, piiResult.entities)
+      const geminiVerdict = await verifyPIIWithGemini(diffText, piiResult.entities, edit.page)
       if (geminiVerdict === 'false_positive') {
         console.log('✓ Gemini says false positive - allowing post through')
         return { safe: true }
