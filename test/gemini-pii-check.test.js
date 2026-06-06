@@ -3,7 +3,7 @@ const nock = require('nock')
 
 const API_BASE = 'https://generativelanguage.googleapis.com'
 const PRO = 'gemini-2.5-pro'
-const FLASH = 'gemini-2.0-flash'
+const FLASH = 'gemini-2.5-flash'
 
 // Load the module fresh so its cached model choice resets for each test.
 function loadModule() {
@@ -84,6 +84,21 @@ describe('lib/gemini-pii-check - Pro timeout fallback to Flash', () => {
 
     assert.strictEqual(verdict, 'unavailable')
     assert.ok(!flashScope.isDone(), 'Flash should not be called on a non-timeout error')
+  })
+
+  it('sends thinkingBudget 0 to Flash but not to Pro', async () => {
+    let proBody, flashBody
+    probePro()
+    nock(API_BASE).post(new RegExp(`/v1beta/models/${PRO}:generateContent`), body => { proBody = body; return true })
+      .replyWithError(timeoutError())
+    nock(API_BASE).post(new RegExp(`/v1beta/models/${FLASH}:generateContent`), body => { flashBody = body; return true })
+      .reply(200, geminiReply(false))
+
+    const { verifyPIIWithGemini } = loadModule()
+    await verifyPIIWithGemini(POST_TEXT, ENTITIES, 'Test Article')
+
+    assert.strictEqual(proBody.generationConfig.thinkingConfig, undefined, 'Pro must not get thinkingConfig (it 400s on budget 0)')
+    assert.strictEqual(flashBody.generationConfig.thinkingConfig.thinkingBudget, 0, 'Flash should disable thinking')
   })
 
   it('does not call Flash when Pro responds in time', async () => {
