@@ -12,3 +12,4 @@ gemini-pii-checks.log
 data/heartbeat-*
 *.png
 .superpowers/
+docs/superpowers/

@@ -34,7 +34,11 @@ def analyze():
     blocked_types = data.get('blocked_entity_types', None)
 
     # Analyze for PII - fast since model is already loaded
-    results = analyzer.analyze(text=text, language='en')
+    # score_threshold filters out Presidio's low-confidence regex matches
+    # (e.g. driver's license 0.3/0.01, bare SSN 0.05, passport 0.05-0.1) that
+    # fire on URL IDs, timestamps, version numbers, and citation tags in diffs.
+    # Validated/context-boosted real PII scores at or above 0.4.
+    results = analyzer.analyze(text=text, language='en', score_threshold=0.4)
 
     # Filter results to only blocked entity types if specified
     if blocked_types:
