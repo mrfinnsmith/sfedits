@@ -263,6 +263,12 @@ describe('posting flow', function() {
         }
       })
 
+      // Mock the Wikipedia diff page fetch (used for page verification)
+      nock('https://en.wikipedia.org')
+        .get('/w/index.php')
+        .query({ diff: '123', oldid: '456' })
+        .reply(200, '<script>RLCONF={"wgPageName":"Test_Article"};</script>')
+
       // Mock PII service HTTP endpoint
       nock('http://pii-service:5000')
         .post('/analyze')
@@ -337,6 +343,56 @@ describe('posting flow', function() {
 
       // Verify screenshot file was cleaned up
       assert.isFalse(fs.existsSync(fakeScreenshotPath), 'Screenshot file should have been deleted')
+    })
+
+    it('blocks the post when the diff belongs to a different page', async function() {
+      this.timeout(10000)
+
+      let screenshotCalled = false
+
+      const pageWatch = proxyquire('../page-watch', {
+        './lib/screenshot': {
+          takeScreenshot: async () => {
+            screenshotCalled = true
+            return fakeScreenshotPath
+          }
+        },
+        './lib/geolocation': {
+          enrichIPsInText: async (text) => text,
+          initializeReader: async () => null
+        }
+      })
+
+      // The diff URL resolves to a DIFFERENT page than edit.page claims -
+      // the wikichanges splice bug. Verification must catch it.
+      nock('https://en.wikipedia.org')
+        .get('/w/index.php')
+        .query({ diff: '1331882607', oldid: '1082626579' })
+        .reply(200, '<script>RLCONF={"wgPageName":"Wikipedia:Articles_for_deletion\\/Roza_Gough"};</script>')
+
+      // Posting endpoints should never be hit. If they are, nock throws.
+      const blueskyScope = nock('https://bsky.social')
+        .post('/xrpc/com.atproto.server.createSession')
+        .reply(200, { accessJwt: 'x', refreshJwt: 'y', did: 'did:plc:x', handle: 'x.bsky.social' })
+
+      const fakeAccount = {
+        bluesky: { identifier: 'testuser.bsky.social', password: 'p', service: 'https://bsky.social' },
+        mastodon: { access_token: 't', instance: 'https://mastodon.example.com' },
+        template: '{{page}} edited by {{name}} {{&url}}',
+        pii_blocking: { enabled: false }
+      }
+
+      const fakeEdit = {
+        page: 'Scott Wiener',
+        user: 'MatrixBot',
+        url: 'https://en.wikipedia.org/w/index.php?diff=1331882607&oldid=1082626579'
+      }
+
+      const statusData = pageWatch.getStatus(fakeEdit, fakeEdit.user, fakeAccount.template)
+      await pageWatch.sendStatus(fakeAccount, statusData, fakeEdit)
+
+      assert.isFalse(screenshotCalled, 'Screenshot should NOT be taken for a mismatched diff')
+      assert.isFalse(blueskyScope.isDone(), 'Bluesky should NOT be called for a mismatched diff')
     })
   })
 })

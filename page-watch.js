@@ -6,7 +6,6 @@ const minimist = require('minimist')
 const Mastodon = require('mastodon')
 const Mustache = require('mustache')
 const { WikiChanges } = require('wikichanges')
-const https = require('https')
 const { saveDraft } = require('./lib/draft-manager')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
 const { takeScreenshot } = require('./lib/screenshot')
@@ -15,6 +14,7 @@ const { createAuthenticatedAgent } = require('./lib/bluesky-client')
 const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
+const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
 
 const path = require('path')
 
@@ -80,46 +80,33 @@ function getUserContributionsUrl(editUrl, username) {
 
 /**
  * Extract text content from Wikipedia diff HTML
+ * @param {string} html - Diff page HTML
+ * @returns {string} - Concatenated diff cell text
  */
-async function extractDiffText(diffUrl) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      headers: {
-        'User-Agent': 'sfedits-bot/1.0 (https://github.com/edsu/anon; Contact via GitHub issues)'
-      }
-    }
-    https.get(diffUrl, options, (res) => {
-      let html = ''
+function extractDiffText(html) {
+  // Extract text from diff table cells
+  const diffMatches = (html || '').match(/<td[^>]*class="[^"]*diff-[^"]*"[^>]*>(.*?)<\/td>/gs)
 
-      res.on('data', (chunk) => html += chunk)
-      res.on('end', () => {
-        // Extract text from diff table cells
-        const diffMatches = html.match(/<td[^>]*class="[^"]*diff-[^"]*"[^>]*>(.*?)<\/td>/gs)
+  if (!diffMatches) {
+    return ''
+  }
 
-        if (!diffMatches) {
-          resolve('')
-          return
-        }
+  let diffText = ''
+  for (const match of diffMatches) {
+    // Remove HTML tags and decode entities
+    let text = match
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim()
 
-        let diffText = ''
-        for (const match of diffMatches) {
-          // Remove HTML tags and decode entities
-          let text = match
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .replace(/\s+/g, ' ')
-            .trim()
+    diffText += text + ' '
+  }
 
-          diffText += text + ' '
-        }
-
-        resolve(diffText.trim())
-      })
-    }).on('error', reject)
-  })
+  return diffText.trim()
 }
 
 /**
@@ -268,15 +255,15 @@ async function sendMastodonAlert(account, edit, statusData, _piiResult) {
 /**
  * Screen edit for PII before posting
  */
-async function screenForPII(account, edit, statusData) {
+async function screenForPII(account, edit, statusData, diffHtml) {
   try {
     // Check if PII blocking is enabled
     if (account.pii_blocking && !account.pii_blocking.enabled) {
       return { safe: true }
     }
 
-    // Extract diff text from Wikipedia
-    const diffText = await extractDiffText(edit.url)
+    // Extract diff text from the already-fetched diff HTML
+    const diffText = extractDiffText(diffHtml || '')
 
     if (!diffText) {
       console.error('⚠ Could not extract diff text - blocking as precaution')
@@ -360,8 +347,19 @@ async function sendStatus(account, statusData, edit) {
     console.log(statusData.text)
 
     if (!argv.noop) {
+      // Fetch the diff once; reused for page verification and PII screening
+      const diffHtml = await fetchDiffHtml(edit.url)
+
+      // Guard against the IRC feed parser splicing a stale page title onto a
+      // different edit's URL. Confirm the diff actually belongs to edit.page.
+      const verification = verifyDiffPage(diffHtml, edit.page)
+      if (!verification.match) {
+        console.error(`Post blocked: diff is for "${verification.actualPage}", not "${edit.page}"`)
+        return
+      }
+
       // PII screening before posting
-      const screeningResult = await screenForPII(account, edit, statusData)
+      const screeningResult = await screenForPII(account, edit, statusData, diffHtml)
 
       if (!screeningResult.safe) {
         console.error(`Post blocked: ${screeningResult.reason}`)
