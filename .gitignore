@@ -11,5 +11,6 @@ pii-blocks.log
 gemini-pii-checks.log
 data/heartbeat-*
 *.png
+!docs/diff-rendering/*.png
 .superpowers/
 docs/superpowers/
