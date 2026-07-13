@@ -233,11 +233,42 @@ describe('compare-diff', function() {
     })
   })
 
+  describe('article meta in output', function() {
+    it('renders description and thumbnail when provided', function() {
+      const diff = [{ type: 1, text: 'new text' }]
+      const html = renderDiffHtml(diff, 'Gavin Newsom', {
+        description: 'Governor of California since 2019',
+        imageDataUri: 'data:image/png;base64,AAAA'
+      })
+      assert.include(html, 'Governor of California since 2019')
+      assert.include(html, 'src="data:image/png;base64,AAAA"')
+    })
+
+    it('renders cleanly with no meta (backward compatible)', function() {
+      const html = renderDiffHtml([{ type: 1, text: 'x' }], 'Cat')
+      assert.notInclude(html, 'class="description"')
+      assert.notInclude(html, 'class="thumb"')
+      assert.include(html, '<h1>Cat</h1>')
+    })
+
+    it('escapes HTML in the description', function() {
+      const html = renderDiffHtml([{ type: 1, text: 'x' }], 'Cat', {
+        description: '<script>alert(1)</script>'
+      })
+      assert.notInclude(html, '<script>')
+    })
+
+    it('includes the description in alt text', function() {
+      const alt = buildAltText([{ type: 1, text: 'New.' }], 'Gavin Newsom', 'Governor of California since 2019')
+      assert.include(alt, 'Diff of Wikipedia article "Gavin Newsom" (Governor of California since 2019):')
+    })
+  })
+
   describe('renderDiffHtml', function() {
     it('renders the fixture with word-level highlights', function() {
       const html = renderDiffHtml(fixture.diff, 'Test Article')
       assert.include(html, 'id="diff"')
-      assert.include(html, 'Test Article — Wikipedia edit')
+      assert.include(html, '<h1>Test Article</h1>')
       assert.include(html, '<ins>')
       assert.include(html, '<del>')
     })
