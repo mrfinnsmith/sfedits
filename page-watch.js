@@ -8,7 +8,7 @@ const Mustache = require('mustache')
 const { WikiChanges } = require('wikichanges')
 const { saveDraft } = require('./lib/draft-manager')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
-const { takeScreenshot } = require('./lib/screenshot')
+const { captureDiffImage } = require('./lib/diff-image')
 const { buildFacets } = require('./lib/bluesky-utils')
 const { createAuthenticatedAgent } = require('./lib/bluesky-client')
 const bluesky = require('./lib/bluesky-platform')
@@ -369,13 +369,13 @@ async function sendStatus(account, statusData, edit) {
       // Enrich IP addresses with country flags
       const enrichedText = await enrichIPsInText(statusData.text)
 
-      // Wait for Wikipedia diff table to fully render
-      await new Promise(r => setTimeout(r, 2000));
-      const screenshot = await takeScreenshot(edit.url)
+      // Render diff via compare API (falls back to page screenshot)
+      const capture = await captureDiffImage(edit.url, edit.page)
 
-      if (!screenshot) {
+      if (!capture) {
         throw new Error('Failed to capture screenshot')
       }
+      const screenshot = capture.screenshot
 
       try {
         // Prepare metadata for posting
@@ -383,7 +383,8 @@ async function sendStatus(account, statusData, edit) {
           page: edit.page,
           name: statusData.name,
           pageUrl: statusData.pageUrl,
-          userUrl: statusData.userUrl
+          userUrl: statusData.userUrl,
+          altText: capture.altText
         }
 
         // Post to Bluesky
