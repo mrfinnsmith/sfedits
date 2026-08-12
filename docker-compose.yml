@@ -24,6 +24,10 @@ services:
       - ./drafts:/opt/sfedits/drafts
       - ./data:/opt/sfedits/data
     restart: unless-stopped
+    # Run tini as PID 1 so orphaned Chromium helpers (chrome_crashpad_handler)
+    # get reaped. Node does not reap re-parented children, so without this
+    # every screenshot leaks zombies until the container hits pids.max.
+    init: true
     # Memory limits for main bot process
     mem_limit: 256m
     mem_reservation: 128m
@@ -44,6 +48,8 @@ services:
     depends_on:
       pii-service:
         condition: service_healthy
+    # Same zombie-reaping requirement as bot: admin posts drafts via takeScreenshot
+    init: true
     # Memory limits for admin web UI (needs 256MB for Puppeteer/Chromium)
     mem_limit: 256m
     mem_reservation: 128m
