@@ -20,6 +20,11 @@ print("Analyzer ready", flush=True)
 
 @app.route('/health', methods=['GET'])
 def health():
+    # Run a real (tiny) analysis so the 10s Docker healthcheck keeps the
+    # spaCy model's pages resident. A no-op health endpoint lets the kernel
+    # swap the model out between edits on the 454MB droplet, making the
+    # next real request take ~12s and blow the bot's timeout.
+    analyzer.analyze(text='ping', language='en', score_threshold=0.4)
     return jsonify({'status': 'ok'}), 200
 
 
