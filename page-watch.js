@@ -28,7 +28,10 @@ const argv = minimist(process.argv.slice(2), {
 const HEARTBEAT_DIR = path.join(__dirname, 'data')
 function writeHeartbeat(name) {
   try {
-    fs.writeFileSync(path.join(HEARTBEAT_DIR, `heartbeat-${name}`), Date.now().toString())
+    const file = path.join(HEARTBEAT_DIR, `heartbeat-${name}`)
+    const tmp = `${file}.tmp`
+    fs.writeFileSync(tmp, Date.now().toString())
+    fs.renameSync(tmp, file)
   } catch (e) {
     // Non-fatal: data dir may not exist in test
   }
