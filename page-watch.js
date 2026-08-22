@@ -115,34 +115,43 @@ function extractDiffText(html) {
 /**
  * Analyze diff text for PII using PII microservice
  */
-async function analyzeForPII(text, blockedEntityTypes = null) {
-  try {
-    const body = { text }
-    if (blockedEntityTypes) {
-      body.blocked_entity_types = blockedEntityTypes
-    }
+async function analyzeForPII(text, blockedEntityTypes = null, retryDelayMs = 8000) {
+  const body = { text }
+  if (blockedEntityTypes) {
+    body.blocked_entity_types = blockedEntityTypes
+  }
 
-    const response = await fetch('http://pii-service:5000/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(5000)
-    })
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const response = await fetch('http://pii-service:5000/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5000)
+      })
 
-    if (!response.ok) {
-      throw new Error(`PII service returned ${response.status}`)
-    }
+      if (!response.ok) {
+        throw new Error(`PII service returned ${response.status}`)
+      }
 
-    return await response.json()
-  } catch (error) {
-    // On timeout/error, log but allow post through
-    // Blocking every post on infrastructure issues defeats the purpose
-    console.error('PII analysis error:', error.message)
-    console.error('⚠ Allowing post through - PII screening unavailable')
-    return {
-      has_pii: false,
-      entities: []
+      return await response.json()
+    } catch (error) {
+      console.error(`PII analysis error (attempt ${attempt}):`, error.message)
+      if (attempt === 1) {
+        // A timed-out first request still forces the service to page its
+        // model back in from swap (~12s measured), so wait out the page-in
+        // and retry against a warm worker.
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+      }
     }
+  }
+
+  // On repeated timeout/error, log but allow post through
+  // Blocking every post on infrastructure issues defeats the purpose
+  console.error('⚠ Allowing post through - PII screening unavailable')
+  return {
+    has_pii: false,
+    entities: []
   }
 }
 
