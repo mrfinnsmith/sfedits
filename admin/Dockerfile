@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     libnss3-dev \
     libxss-dev \
     fonts-liberation \
+    fonts-noto-core \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 

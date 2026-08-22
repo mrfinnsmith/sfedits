@@ -13,3 +13,4 @@ data/heartbeat-*
 *.png
 .superpowers/
 docs/superpowers/
+__pycache__/
