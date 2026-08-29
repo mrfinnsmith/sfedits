@@ -6,6 +6,7 @@ const os = require('os')
 const { execFile } = require('child_process')
 const { getConfig, countWatchlist, loadWatchlist } = require('../lib/config')
 const { extractWatchlist } = require('../scripts/extract-watchlist')
+const pageWatch = require('../page-watch')
 
 describe('Watchlist and Configuration Loading', function() {
   let tmpDir
@@ -113,7 +114,7 @@ describe('Watchlist and Configuration Loading', function() {
       assert.deepEqual(config.accounts[0].watchlist, inlineWatchlist)
     })
 
-    it('gives precedence to watchlist.json when both exist', function() {
+    it('throws when inline and file watchlists differ (migration guard)', function() {
       const configPath = path.join(tmpDir, 'config.json')
       const watchlistPath = path.join(tmpDir, 'watchlist.json')
 
@@ -141,11 +142,96 @@ describe('Watchlist and Configuration Loading', function() {
       fs.writeFileSync(configPath, JSON.stringify(configData), 'utf8')
       fs.writeFileSync(watchlistPath, JSON.stringify(fileWatchlist), 'utf8')
 
+      assert.throws(() => {
+        getConfig(configPath, null, { silent: true })
+      }, /Watchlist conflict.*extract-watchlist/)
+    })
+
+    it('does not throw when inline and file watchlists are deep-equal (idempotent re-deploy)', function() {
+      const configPath = path.join(tmpDir, 'config.json')
+      const watchlistPath = path.join(tmpDir, 'watchlist.json')
+
+      const inlineWatchlist = {
+        'English Wikipedia': {
+          'New File Article': true
+        }
+      }
+      const fileWatchlist = {
+        'English Wikipedia': {
+          'New File Article': true
+        }
+      }
+
+      const configData = {
+        nick: 'testbot',
+        accounts: [
+          {
+            template: '{{{page}}} edited',
+            watchlist: inlineWatchlist
+          }
+        ]
+      }
+
+      fs.writeFileSync(configPath, JSON.stringify(configData), 'utf8')
+      fs.writeFileSync(watchlistPath, JSON.stringify(fileWatchlist), 'utf8')
+
       const config = getConfig(configPath, null, { silent: true })
 
       assert.deepEqual(config.accounts[0].watchlist, fileWatchlist)
-      assert.isUndefined(config.accounts[0].watchlist['English Wikipedia']['Old Inline Article'])
-      assert.isTrue(config.accounts[0].watchlist['English Wikipedia']['New File Article'])
+    })
+
+    it('throws when a top-level config.watchlist differs from the file (migration guard)', function() {
+      const configPath = path.join(tmpDir, 'config.json')
+      const watchlistPath = path.join(tmpDir, 'watchlist.json')
+
+      const configData = {
+        nick: 'testbot',
+        watchlist: {
+          'English Wikipedia': {
+            'Inline Top Level': true
+          }
+        },
+        accounts: [{ template: 'test' }]
+      }
+      const fileWatchlist = {
+        'English Wikipedia': {
+          'File Title': true
+        }
+      }
+
+      fs.writeFileSync(configPath, JSON.stringify(configData), 'utf8')
+      fs.writeFileSync(watchlistPath, JSON.stringify(fileWatchlist), 'utf8')
+
+      assert.throws(() => {
+        getConfig(configPath, null, { silent: true })
+      }, /Watchlist conflict/)
+    })
+
+    it('does not throw when the inline watchlist is empty and the file has titles', function() {
+      const configPath = path.join(tmpDir, 'config.json')
+      const watchlistPath = path.join(tmpDir, 'watchlist.json')
+
+      const configData = {
+        nick: 'testbot',
+        accounts: [
+          {
+            template: 'test',
+            watchlist: {}
+          }
+        ]
+      }
+      const fileWatchlist = {
+        'English Wikipedia': {
+          'File Title': true
+        }
+      }
+
+      fs.writeFileSync(configPath, JSON.stringify(configData), 'utf8')
+      fs.writeFileSync(watchlistPath, JSON.stringify(fileWatchlist), 'utf8')
+
+      const config = getConfig(configPath, null, { silent: true })
+
+      assert.deepEqual(config.accounts[0].watchlist, fileWatchlist)
     })
 
     it('supports explicit watchlist path override', function() {
@@ -280,6 +366,80 @@ describe('Watchlist and Configuration Loading', function() {
       const config = getConfig(configPath, null, { silent: true })
 
       assert.deepEqual(config.accounts[0].ranges, rangesData)
+    })
+  })
+
+  describe('loadWatchlist shape validation', function() {
+    function writeWatchlist(content) {
+      const watchlistPath = path.join(tmpDir, 'watchlist.json')
+      fs.writeFileSync(watchlistPath, typeof content === 'string' ? content : JSON.stringify(content), 'utf8')
+      return watchlistPath
+    }
+
+    it('rejects an empty object watchlist', function() {
+      const watchlistPath = writeWatchlist({})
+      assert.throws(() => loadWatchlist(watchlistPath), /empty \(no wikis\)/)
+    })
+
+    it('rejects a JSON string watchlist', function() {
+      const watchlistPath = writeWatchlist('"just a string"')
+      assert.throws(() => loadWatchlist(watchlistPath), /Invalid watchlist/)
+    })
+
+    it('rejects an array watchlist', function() {
+      const watchlistPath = writeWatchlist(['English Wikipedia'])
+      assert.throws(() => loadWatchlist(watchlistPath), /Invalid watchlist/)
+    })
+
+    it('rejects a wiki mapping to an empty object', function() {
+      const watchlistPath = writeWatchlist({ 'English Wikipedia': {} })
+      assert.throws(() => loadWatchlist(watchlistPath), /has no titles/)
+    })
+
+    it('rejects a non-boolean leaf', function() {
+      const watchlistPath = writeWatchlist({ 'English Wikipedia': { 'Test Article': 'yes' } })
+      assert.throws(() => loadWatchlist(watchlistPath), /must be a boolean/)
+    })
+
+    it('accepts a valid watchlist', function() {
+      const watchlistPath = writeWatchlist({ 'English Wikipedia': { 'Test Article': true } })
+      assert.deepEqual(loadWatchlist(watchlistPath), { 'English Wikipedia': { 'Test Article': true } })
+    })
+  })
+
+  describe('page-watch checkConfig', function() {
+    it('fails when the resolved watchlist is empty', function(done) {
+      const config = {
+        nick: 'testbot',
+        accounts: [{ template: 'test', watchlist: {} }]
+      }
+      pageWatch.checkConfig(config, function(err) {
+        try {
+          assert.isOk(err)
+          assert.match(String(err), /watchlist/i)
+          done()
+        } catch (e) {
+          done(e)
+        }
+      })
+    })
+
+    it('passes when the resolved watchlist has a wiki with titles', function(done) {
+      const config = {
+        nick: 'testbot',
+        accounts: [{
+          template: 'test',
+          watchlist: { 'English Wikipedia': { 'Golden Gate Bridge': true } }
+        }]
+      }
+      pageWatch.checkConfig(config, function(err) {
+        try {
+          assert.isNotOk(err)
+          done()
+        } catch (e) {
+          done(e)
+        }
+      })
     })
   })
 

@@ -31,7 +31,7 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 4. **MaxMind updater** (curl)
    - Downloads latest IP geolocation database weekly
    - Runs continuously in background
-   - Updates transparently without requiring restarts
+   - Updates transparently - no restarts needed
 
 ## How it works
 
@@ -62,7 +62,7 @@ docker-compose up -d
 **Node.js (requires Python/PII service separate):**
 ```bash
 npm install
-node page-watch.js --noop  # Test mode (does not post)
+node page-watch.js --noop  # Test mode - doesn't post
 ```
 
 The PII service will take ~20-30 seconds to load spaCy models on first start. The bot waits for the PII service to be healthy before starting.
@@ -202,6 +202,16 @@ The watchlist is stored in `watchlist.json` and tracked in git:
 }
 ```
 
+**Placeholder warning:** the committed `watchlist.json` currently contains only the 3 template titles above. It is a placeholder, not the production list. Replace it before deploying, or the bot will watch only those 3 titles. To replace it, run the migration script on the machine holding the real `config.json`:
+
+```bash
+node scripts/extract-watchlist.js
+```
+
+Commit the resulting `watchlist.json`, delete the `watchlist` key from each account in `config.json`, then deploy. If a deploy happens while `config.json` still carries an inline watchlist that differs from `watchlist.json`, the bot refuses to start with an error naming the conflict and the migration steps — it never silently drops titles.
+
+When `watchlist.json` is present, every account uses it: all accounts share one watchlist, and any per-account inline watchlist must match the file or the bot refuses to start.
+
 Edit `watchlist.json` in the repository rather than over SSH on the droplet. Deploy changes with `./deploy.sh` or restart the containers after pulling. Because the bot reads the watchlist at startup and does not hot reload, container restarts are required for watchlist updates to take effect.
 
 ### Bluesky Setup
@@ -220,8 +230,8 @@ To set up Mastodon posting and PII alert DMs:
 
 1. Go to your Mastodon instance's settings → Development → New Application
 2. **Critical:** When selecting scopes, choose:
-   - `write:media`: upload media files
-   - `write:statuses`: publish posts
+   - `write:media` - upload media files
+   - `write:statuses` - publish posts
 3. Copy the access token to your config.json
 
 **Note:** Without the correct scopes (`write:media` and `write:statuses`), Mastodon posting will fail silently while Bluesky continues to work.
@@ -359,9 +369,13 @@ Tests use:
 ```bash
 npm install                 # Install dependencies
 npm test                    # Run tests
-node page-watch.js --noop   # Test mode (does not post)
+node page-watch.js --noop   # Test mode - doesn't post
 node page-watch.js --verbose # Show all edit activity
 ```
+
+**Common flags:**
+- `--config <path>`: path to `config.json` (default: `./config.json`)
+- `--watchlist <path>`: path to `watchlist.json` (default: `watchlist.json` next to the config file)
 
 **Test mode (`--noop`):**
 - Monitors Wikipedia edits in real-time
@@ -383,6 +397,8 @@ This script:
 - Fetches categories for each article in your English Wikipedia watchlist
 - Helps identify common category patterns (e.g., "San Francisco Board of Supervisors members")
 - Useful for expanding monitoring to other language Wikipedias
+
+Supports the same `--config` and `--watchlist` flags as the bot.
 
 ### `scripts/find-articles-in-categories.js`
 
@@ -415,6 +431,8 @@ This script:
 - Finds translations in other language Wikipedias
 - Shows language codes and translated article titles
 - Useful for expanding monitoring to multiple language Wikipedias
+
+Supports the same `--config` and `--watchlist` flags as the bot.
 
 ### `scripts/extract-watchlist.js`
 

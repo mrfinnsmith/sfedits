@@ -16,14 +16,16 @@ const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
 
-const { getConfig } = require('./lib/config')
+const { getConfig, countWatchlist } = require('./lib/config')
 
 const path = require('path')
 
 const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'watchlist'],
   default: {
     verbose: false,
-    config: './config.json'
+    config: './config.json',
+    watchlist: null
   }
 })
 
@@ -427,11 +429,19 @@ async function inspect(account, edit) {
 }
 
 function checkConfig(config, error) {
-  if (config.accounts) {
-    return async.each(config.accounts, (account, callback) => callback(), error)
-  } else {
-    return error("missing accounts stanza in config")
+  if (!config.accounts) {
+    return error('missing accounts stanza in config')
   }
+  // Fail at startup if nothing is being watched: a bot with an empty resolved
+  // watchlist starts happily and posts nothing forever.
+  const hasWatchedContent = config.accounts.some(account => {
+    const { wikis, titles } = countWatchlist(account.watchlist)
+    return wikis > 0 && titles > 0
+  })
+  if (!hasWatchedContent) {
+    return error('resolved watchlist is empty: no account watches at least one wiki with at least one title; the bot would never post')
+  }
+  return async.each(config.accounts, (account, callback) => callback(), error)
 }
 
 async function main() {
@@ -476,6 +486,7 @@ if (require.main === module) {
 module.exports = {
   main,
   getConfig,
+  checkConfig,
   getStatus,
   getArticleUrl,
   getUserContributionsUrl,

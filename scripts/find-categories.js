@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
 const https = require('https')
 const minimist = require('minimist')
 const { getConfig } = require('../lib/config')
 
 const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'watchlist'],
   default: {
-    config: './config.json'
+    config: './config.json',
+    watchlist: null
   }
 })
 

@@ -43,7 +43,6 @@ services:
       - CONFIG_PATH=/opt/sfedits/config.json
     volumes:
       - ./config.json:/opt/sfedits/config.json:ro
-      - ./watchlist.json:/opt/sfedits/watchlist.json:ro
       - ./drafts:/opt/sfedits/drafts
       - ./data:/opt/sfedits/data
     restart: unless-stopped
