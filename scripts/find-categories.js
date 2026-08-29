@@ -2,11 +2,14 @@
 
 const fs = require('fs')
 const https = require('https')
+const minimist = require('minimist')
+const { getConfig } = require('../lib/config')
 
-function getConfig() {
-  const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
-  return config
-}
+const argv = minimist(process.argv.slice(2), {
+  default: {
+    config: './config.json'
+  }
+})
 
 function getWikipediaCategories(pageTitle) {
   return new Promise((resolve, reject) => {
@@ -46,7 +49,7 @@ function getWikipediaCategories(pageTitle) {
 }
 
 async function main() {
-  const config = getConfig()
+  const config = getConfig(argv.config, argv.watchlist)
   
   console.log('Finding categories for all English Wikipedia articles in config...\n')
   

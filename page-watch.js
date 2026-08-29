@@ -16,6 +16,8 @@ const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
 
+const { getConfig } = require('./lib/config')
+
 const path = require('path')
 
 const argv = minimist(process.argv.slice(2), {
@@ -35,27 +37,6 @@ function writeHeartbeat(name) {
   } catch (e) {
     // Non-fatal: data dir may not exist in test
   }
-}
-
-function getConfig(path) {
-  const config = loadJson(path)
-  // see if ranges are externally referenced as a separate .json files
-  if (config.accounts) {
-    for (let account of Array.from(config.accounts)) {
-      if (typeof account.ranges === 'string') {
-        account.ranges = loadJson(account.ranges)
-      }
-    }
-  }
-  console.log("loaded config from", path)
-  return config
-}
-
-function loadJson(path) {
-  if ((path[0] !== '/') && (path.slice(0, 2) !== './')) {
-    path = `./${path}`
-  }
-  return require(path)
 }
 
 // Builds Wikipedia article URL from edit URL. Returns null if URL is malformed.
@@ -454,7 +435,7 @@ function checkConfig(config, error) {
 }
 
 async function main() {
-  const config = getConfig(argv.config)
+  const config = getConfig(argv.config, argv.watchlist)
 
   // Initialize geolocation database before listening for edits
   await initializeReader()

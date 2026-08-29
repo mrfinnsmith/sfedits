@@ -31,7 +31,7 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 4. **MaxMind updater** (curl)
    - Downloads latest IP geolocation database weekly
    - Runs continuously in background
-   - Updates transparently - no restarts needed
+   - Updates transparently without requiring restarts
 
 ## How it works
 
@@ -47,8 +47,10 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 
 ```bash
 cp config.json.template config.json
-# Edit with your Bluesky/Mastodon credentials and article watchlist
+# Edit with your Bluesky/Mastodon credentials
 ```
+
+The article watchlist is committed in `watchlist.json`.
 
 ### 2. Run locally
 
@@ -60,7 +62,7 @@ docker-compose up -d
 **Node.js (requires Python/PII service separate):**
 ```bash
 npm install
-node page-watch.js --noop  # Test mode - doesn't post
+node page-watch.js --noop  # Test mode (does not post)
 ```
 
 The PII service will take ~20-30 seconds to load spaCy models on first start. The bot waits for the PII service to be healthy before starting.
@@ -134,9 +136,9 @@ docker-compose restart
 docker-compose down
 ```
 
-**To update code:** Run `./deploy.sh` on your local machine.
+**To update code or watchlist:** Commit changes to the repository, push to GitHub, and run `./deploy.sh` on your local machine.
 
-**To change config:** Edit `config.json` on the droplet and run `docker-compose restart bot admin`.
+**To change credentials:** Edit `config.json` on the droplet and run `docker-compose restart bot admin`.
 
 ## Maintenance
 
@@ -155,6 +157,12 @@ docker system prune -af
 
 ## Configuration
 
+The bot uses two configuration files:
+1. `config.json` (gitignored): Holds platform credentials and alerting settings.
+2. `watchlist.json` (committed): Holds the articles and Wikipedia language editions to monitor.
+
+### Credentials (`config.json`)
+
 Create `config.json` from the template:
 
 ```json
@@ -162,12 +170,6 @@ Create `config.json` from the template:
   "nick": "sfedits",
   "accounts": [{
     "template": "{{{page}}} Wikipedia article edited by {{{name}}} {{&url}}",
-    "watchlist": {
-      "English Wikipedia": {
-        "San Francisco Board of Supervisors": true,
-        "Daniel Lurie": true
-      }
-    },
     "bluesky": {
       "identifier": "your-username.bsky.social",
       "password": "your-app-password"
@@ -184,7 +186,23 @@ Create `config.json` from the template:
 }
 ```
 
-**Important:** Never commit `config.json` - it contains credentials and is gitignored. Update it directly on the droplet when you need to change the watchlist or credentials.
+**Important:** Never commit `config.json` because it contains secret credentials. Update credentials directly on the droplet when needed.
+
+### Watchlist (`watchlist.json`)
+
+The watchlist is stored in `watchlist.json` and tracked in git:
+
+```json
+{
+  "English Wikipedia": {
+    "San Francisco Board of Supervisors": true,
+    "Daniel Lurie": true,
+    "London Breed": true
+  }
+}
+```
+
+Edit `watchlist.json` in the repository rather than over SSH on the droplet. Deploy changes with `./deploy.sh` or restart the containers after pulling. Because the bot reads the watchlist at startup and does not hot reload, container restarts are required for watchlist updates to take effect.
 
 ### Bluesky Setup
 
@@ -202,8 +220,8 @@ To set up Mastodon posting and PII alert DMs:
 
 1. Go to your Mastodon instance's settings → Development → New Application
 2. **Critical:** When selecting scopes, choose:
-   - `write:media` - upload media files
-   - `write:statuses` - publish posts
+   - `write:media`: upload media files
+   - `write:statuses`: publish posts
 3. Copy the access token to your config.json
 
 **Note:** Without the correct scopes (`write:media` and `write:statuses`), Mastodon posting will fail silently while Bluesky continues to work.
@@ -341,7 +359,7 @@ Tests use:
 ```bash
 npm install                 # Install dependencies
 npm test                    # Run tests
-node page-watch.js --noop   # Test mode - doesn't post
+node page-watch.js --noop   # Test mode (does not post)
 node page-watch.js --verbose # Show all edit activity
 ```
 
@@ -397,6 +415,18 @@ This script:
 - Finds translations in other language Wikipedias
 - Shows language codes and translated article titles
 - Useful for expanding monitoring to multiple language Wikipedias
+
+### `scripts/extract-watchlist.js`
+
+Extracts the watchlist from an existing `config.json` into `watchlist.json`.
+
+```bash
+node scripts/extract-watchlist.js
+```
+
+Options:
+- `--config <path>`: Path to input config file (default: `./config.json`)
+- `--output <path>`: Path to output watchlist file (default: `./watchlist.json`)
 
 ## License
 
