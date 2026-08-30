@@ -208,7 +208,7 @@ The watchlist is stored in `watchlist.json` and tracked in git:
 node scripts/extract-watchlist.js
 ```
 
-Commit the resulting `watchlist.json`, delete the `watchlist` key from each account in `config.json`, then deploy. If a deploy happens while `config.json` still carries an inline watchlist that differs from `watchlist.json`, the bot refuses to start with an error naming the conflict and the migration steps — it never silently drops titles.
+Commit the resulting `watchlist.json`, delete the `watchlist` key from each account in `config.json`, then deploy. If a deploy happens while `config.json` still carries an inline watchlist that differs from `watchlist.json`, the bot refuses to start with an error naming the conflict and the migration steps. It never silently drops titles.
 
 When `watchlist.json` is present, every account uses it: all accounts share one watchlist, and any per-account inline watchlist must match the file or the bot refuses to start.
 
