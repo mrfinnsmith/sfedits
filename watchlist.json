@@ -1,7 +1,479 @@
 {
+  "Arabic Wikipedia": {
+    "نانسي بيلوسي": true,
+    "غافن نيوسوم": true,
+    "إدوين لي": true,
+    "مارك فاريل": true,
+    "كريس دالي (سياسي)": true,
+    "ديان فاينستاين": true,
+    "فيلي براون (سياسي)": true,
+    "فيلي براون (توضيح)": true,
+    "فرانك جوردن (سياسي)": true,
+    "ديفيد تشيو (سياسي)": true,
+    "جورج غاسكون": true,
+    "كامالا هاريس": true
+  },
+  "French Wikipedia": {
+    "Conseil des superviseurs de San Francisco": true,
+    "Daniel Lurie": true,
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Edwin M. Lee": true,
+    "London Breed": true,
+    "Mark Farrell (homme politique)": true,
+    "Maire de San Francisco": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (homme politique)": true,
+    "Willie Brown": true,
+    "George Moscone": true,
+    "Art Agnos": true,
+    "Frank Jordan": true,
+    "Kamala Harris": true,
+    "San Francisco Police Department": true
+  },
+  "German Wikipedia": {
+    "Daniel Lurie": true,
+    "Scott Wiener": true,
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Edwin M. Lee": true,
+    "London Breed": true,
+    "Mark Farrell": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (Politiker)": true,
+    "Willie Brown": true,
+    "George Moscone": true,
+    "Art Agnos": true,
+    "Kamala Harris": true
+  },
+  "Spanish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "George Moscone": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true,
+    "Departamento de Policía de San Francisco": true,
+    "Gobierno de San Francisco": true
+  },
+  "Portuguese Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Edwin M. Lee": true,
+    "London Breed": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (político)": true,
+    "George Moscone": true,
+    "Art Agnos": true,
+    "Frank Jordan": true,
+    "Kamala Harris": true,
+    "Conselho de Supervisores de São Francisco": true,
+    "San Francisco Police Department": true,
+    "Prefeito de São Francisco (Califórnia)": true,
+    "Procurador de São Francisco": true
+  },
+  "Chinese Wikipedia": {
+    "舊金山參事委員會": true,
+    "三藩市警察局": true,
+    "南希·佩洛西": true,
+    "加文·纽森": true,
+    "李孟贤": true,
+    "乔治·莫斯科尼": true,
+    "黛安·范士丹": true,
+    "博徹思": true,
+    "賀錦麗": true
+  },
+  "Japanese Wikipedia": {
+    "サンフランシスコ市警察": true,
+    "サンフランシスコ保安官局": true,
+    "ナンシー・ペロシ": true,
+    "ギャビン・ニューサム": true,
+    "エドウィン・リー": true,
+    "サンフランシスコ市長": true,
+    "ダイアン・ファインスタイン": true,
+    "ウィリー・ブラウン": true,
+    "カマラ・ハリス": true
+  },
+  "Korean Wikipedia": {
+    "샌프란시스코 경찰국": true,
+    "낸시 펠로시": true,
+    "개빈 뉴섬": true,
+    "다이앤 파인스타인": true,
+    "윌리 브라운 (정치인)": true,
+    "윌리 브라운": true,
+    "카멀라 해리스": true
+  },
+  "Russian Wikipedia": {
+    "Пелоси, Нэнси": true,
+    "Ньюсом, Гэвин": true,
+    "Ли, Эдвин Ма": true,
+    "Брид, Лондон": true,
+    "Фаррелл, Марк (политик)": true,
+    "Фаррелл, Марк": true,
+    "Файнстайн, Дайэнн": true,
+    "Браун, Уилли Льюис (младший)": true,
+    "Москоне, Джордж": true,
+    "Агнос, Арт": true,
+    "Джордан, Фрэнк": true,
+    "Харрис, Камала": true,
+    "Департамент полиции Сан-Франциско": true
+  },
+  "Italian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee": true,
+    "London Breed": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (politico)": true,
+    "Willie Brown": true,
+    "George Moscone": true,
+    "Art Agnos": true,
+    "Frank Jordan": true,
+    "Kamala Harris": true,
+    "San Francisco Police Department": true
+  },
   "English Wikipedia": {
     "San Francisco Board of Supervisors": true,
     "Daniel Lurie": true,
-    "London Breed": true
+    "Alan Wong (politician)": true,
+    "Connie Chan (politician)": true,
+    "Stephen Sherrill": true,
+    "Danny Sauter": true,
+    "Joel Engardio": true,
+    "Bilal Mahmood": true,
+    "Matt Dorsey": true,
+    "Myrna Melgar": true,
+    "Rafael Mandelman": true,
+    "Jackie Fielder": true,
+    "Shamann Walton": true,
+    "Chyanne Chen": true,
+    "Beya Alcaraz": true,
+    "Dean Preston": true,
+    "San Francisco Police Department": true,
+    "San Francisco Sheriff's Office": true,
+    "Scott Wiener": true,
+    "Nancy Pelosi": true,
+    "Phil Ting": true,
+    "Matt Haney": true,
+    "Gavin Newsom": true,
+    "Ed Lee": true,
+    "London Breed": true,
+    "Mark Farrell (politician)": true,
+    "Aaron Peskin": true,
+    "Chris Daly": true,
+    "Ross Mirkarimi": true,
+    "David Campos": true,
+    "San Francisco Department of Public Works corruption scandal": true,
+    "Mohammed Nuru": true,
+    "San Francisco graft trials": true,
+    "City Attorney of San Francisco": true,
+    "San Francisco District Attorney's Office": true,
+    "Mayor of San Francisco": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (politician)": true,
+    "George Moscone": true,
+    "Art Agnos": true,
+    "Frank Jordan": true,
+    "Members of the San Francisco Board of Supervisors": true,
+    "Government of San Francisco": true,
+    "Brooke Jenkins": true,
+    "David Chiu (politician)": true,
+    "Manohar Raju": true,
+    "San Francisco Public Defender's Office": true,
+    "Paul Miyamoto": true,
+    "José Cisneros": true,
+    "George Gascón": true,
+    "Chesa Boudin": true,
+    "Kamala Harris": true,
+    "San Francisco Police Commission": true
+  },
+  "Bulgarian Wikipedia": {
+    "Санфранциски общински съвет": true,
+    "Нанси Пелоси": true,
+    "Гавин Нюсъм": true,
+    "Даян Файнстайн": true,
+    "Камала Харис": true,
+    "Полицейско управление на Сан Франциско": true
+  },
+  "Simple English Wikipedia": {
+    "San Francisco Board of Supervisors": true,
+    "Daniel Lurie": true,
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee": true,
+    "London Breed": true,
+    "Mayor of San Francisco": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (politician)": true,
+    "Willie Brown": true,
+    "George Moscone": true,
+    "Art Agnos": true,
+    "Frank Jordan": true,
+    "Kamala Harris": true,
+    "Scott Wiener": true,
+    "San Francisco District Attorney's Office": true,
+    "George Gascón": true
+  },
+  "Hebrew Wikipedia": {
+    "דניאל לורי": true,
+    "ננסי פלוסי": true,
+    "גאווין ניוסם": true,
+    "לונדון בריד": true,
+    "דיאן פיינסטיין": true,
+    "קמלה האריס": true
+  },
+  "Egyptian Arabic Wikipedia": {
+    "نانسى بيلوسى": true,
+    "جافن نيوسوم": true,
+    "ادوين لى": true,
+    "سلالة لندن": true,
+    "مارك فاريل (سياسى من امريكا)": true,
+    "ديانى فينستين": true,
+    "ويللى براون": true,
+    "چورچ موسكون": true,
+    "ارت اجنوس": true,
+    "فرانك جوردن (سياسى من امريكا)": true,
+    "كامالا هاريس": true,
+    "سكوت وينر": true,
+    "تشيسا بودين": true,
+    "مات هانى": true,
+    "روس ميركاريمى": true,
+    "ديڤيد كيو": true,
+    "جورج جاسكون": true
+  },
+  "South Azerbaijani Wikipedia": {
+    "نانسی پلوسی": true,
+    "قوین نیوسام": true,
+    "اد لی (سیاستچی)": true,
+    "لاندن برید": true,
+    "داین فاینستاین": true,
+    "ویلی براون (سیاستچی)": true,
+    "جورج موزکون": true,
+    "آرت آقنوز": true,
+    "کامالا هاریس": true,
+    "ایسکوت وینر": true,
+    "فیل تینق": true,
+    "داوید چیو (سیاستچی)": true
+  },
+  "Breton Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Kamala Harris": true
+  },
+  "Catalan Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Dianne Feinstein": true,
+    "George Moscone": true,
+    "Kamala Harris": true
+  },
+  "Central Kurdish Wikipedia": {
+    "نانسی پیلۆسی": true,
+    "گاڤین نیوسۆم": true,
+    "کامڵا ھاریس": true
+  },
+  "Czech Wikipedia": {
+    "Nancy Pelosiová": true,
+    "Gavin Newsom": true,
+    "Dianne Feinsteinová": true,
+    "Kamala Harrisová": true,
+    "San Francisco Police Department": true
+  },
+  "Danish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Greek Wikipedia": {
+    "Νάνσι Πελόζι": true,
+    "Γκάβιν Νιούσομ": true,
+    "Νταϊάν Φάινσταϊν": true,
+    "Κάμαλα Χάρις": true
+  },
+  "Esperanto Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Willie Brown (politikisto)": true,
+    "Kamala Harris": true
+  },
+  "Persian Wikipedia": {
+    "نانسی پلوسی": true,
+    "گوین نیوسام": true,
+    "اد لی (سیاستمدار)": true,
+    "لاندن برید": true,
+    "داین فاینستاین": true,
+    "ویلی براون (سیاست‌مدار)": true,
+    "ویلی براون": true,
+    "جرج ماسکونی": true,
+    "کامالا هریس": true,
+    "اسکات وینر": true,
+    "اداره پلیس سان فرانسیسکو": true,
+    "چیسا بودین": true,
+    "راس میرکریمی": true
+  },
+  "Finnish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Edwin M. Lee": true,
+    "London Breed": true,
+    "San Franciscon pormestari": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Irish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Hungarian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Armenian Wikipedia": {
+    "Նենսի Փելոսի": true,
+    "Լոնդոն Բրիդ": true,
+    "Դայեն Ֆայնսթայն": true,
+    "Քամալա Հարիս": true
+  },
+  "Indonesian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee": true,
+    "London Breed": true,
+    "Daftar Wali Kota San Francisco": true,
+    "Dianne Feinstein": true,
+    "Willie Brown": true,
+    "Kamala Harris": true
+  },
+  "Icelandic Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Latin Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavinus Newsom": true,
+    "Edwinus Lee": true,
+    "London Breed": true,
+    "Diana Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Latvian Wikipedia": {
+    "Nensija Pelosi": true,
+    "Gavins Ņūsoms": true,
+    "Daiena Fainstaina": true,
+    "Džordžs Moskone": true,
+    "Kamala Harisa": true
+  },
+  "Malay Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Norwegian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee": true,
+    "Mark Farrell": true,
+    "Dianne Feinstein": true,
+    "George Moscone": true,
+    "Kamala Harris": true,
+    "San Francisco Police Department": true,
+    "San Francisco Sheriff’s Department": true,
+    "Joel Engardio": true
+  },
+  "Dutch Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee (politicus)": true,
+    "Dianne Feinstein": true,
+    "Willie Brown (politicus)": true,
+    "Willie Brown": true,
+    "George Moscone": true,
+    "Kamala Harris": true,
+    "San Francisco Police Department": true
+  },
+  "Polish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true
+  },
+  "Romanian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Kamala Harris": true
+  },
+  "Serbo-Croatian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Dianne Feinstein": true,
+    "George Moscone": true,
+    "Kamala Harris": true
+  },
+  "Slovenian Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Kamala Harris": true
+  },
+  "Serbian Wikipedia": {
+    "Ненси Пелоси": true,
+    "Гавин Њусом": true,
+    "Камала Харис": true
+  },
+  "Swedish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee": true,
+    "Dianne Feinstein": true,
+    "George Moscone": true,
+    "Kamala Harris": true,
+    "San Francisco Police Department": true
+  },
+  "Turkish Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Ed Lee (siyasetçi)": true,
+    "Dianne Feinstein": true,
+    "Kamala Harris": true,
+    "George Gascón": true
+  },
+  "Ukrainian Wikipedia": {
+    "Ненсі Пелосі": true,
+    "Ґевін Ньюсом": true,
+    "Даян Файнштайн": true,
+    "Камала Гарріс": true
+  },
+  "Uzbek Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "Kamala Harris": true
+  },
+  "Vietnamese Wikipedia": {
+    "Nancy Pelosi": true,
+    "Gavin Newsom": true,
+    "London Breed": true,
+    "Kamala Harris": true,
+    "Danny Sauter": true,
+    "Rafael Mandelman": true
+  },
+  "Cantonese Wikipedia": {
+    "佩洛西": true,
+    "李孟賢": true,
+    "賀錦麗": true
+  },
+  "Old English Wikipedia": {
+    "Gāwain Nīwhām": true
+  },
+  "Occitan Wikipedia": {
+    "Gavin Newsom": true,
+    "Kamala Harris": true
+  },
+  "Tagalog Wikipedia": {
+    "Gavin Newsom": true,
+    "Kamala Harris": true
   }
 }
