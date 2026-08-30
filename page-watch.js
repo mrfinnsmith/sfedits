@@ -16,12 +16,16 @@ const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
 
+const { getConfig, countWatchlist } = require('./lib/config')
+
 const path = require('path')
 
 const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'watchlist'],
   default: {
     verbose: false,
-    config: './config.json'
+    config: './config.json',
+    watchlist: null
   }
 })
 
@@ -35,27 +39,6 @@ function writeHeartbeat(name) {
   } catch (e) {
     // Non-fatal: data dir may not exist in test
   }
-}
-
-function getConfig(path) {
-  const config = loadJson(path)
-  // see if ranges are externally referenced as a separate .json files
-  if (config.accounts) {
-    for (let account of Array.from(config.accounts)) {
-      if (typeof account.ranges === 'string') {
-        account.ranges = loadJson(account.ranges)
-      }
-    }
-  }
-  console.log("loaded config from", path)
-  return config
-}
-
-function loadJson(path) {
-  if ((path[0] !== '/') && (path.slice(0, 2) !== './')) {
-    path = `./${path}`
-  }
-  return require(path)
 }
 
 // Builds Wikipedia article URL from edit URL. Returns null if URL is malformed.
@@ -446,15 +429,23 @@ async function inspect(account, edit) {
 }
 
 function checkConfig(config, error) {
-  if (config.accounts) {
-    return async.each(config.accounts, (account, callback) => callback(), error)
-  } else {
-    return error("missing accounts stanza in config")
+  if (!config.accounts) {
+    return error('missing accounts stanza in config')
   }
+  // Fail at startup if nothing is being watched: a bot with an empty resolved
+  // watchlist starts happily and posts nothing forever.
+  const hasWatchedContent = config.accounts.some(account => {
+    const { wikis, titles } = countWatchlist(account.watchlist)
+    return wikis > 0 && titles > 0
+  })
+  if (!hasWatchedContent) {
+    return error('resolved watchlist is empty: no account watches at least one wiki with at least one title; the bot would never post')
+  }
+  return async.each(config.accounts, (account, callback) => callback(), error)
 }
 
 async function main() {
-  const config = getConfig(argv.config)
+  const config = getConfig(argv.config, argv.watchlist)
 
   // Initialize geolocation database before listening for edits
   await initializeReader()
@@ -495,6 +486,7 @@ if (require.main === module) {
 module.exports = {
   main,
   getConfig,
+  checkConfig,
   getStatus,
   getArticleUrl,
   getUserContributionsUrl,

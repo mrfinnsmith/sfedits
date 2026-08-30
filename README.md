@@ -47,8 +47,10 @@ Based on [anon](https://github.com/edsu/anon), originally created for @congresse
 
 ```bash
 cp config.json.template config.json
-# Edit with your Bluesky/Mastodon credentials and article watchlist
+# Edit with your Bluesky/Mastodon credentials
 ```
+
+The article watchlist is committed in `watchlist.json`.
 
 ### 2. Run locally
 
@@ -134,9 +136,9 @@ docker-compose restart
 docker-compose down
 ```
 
-**To update code:** Run `./deploy.sh` on your local machine.
+**To update code or watchlist:** Commit changes to the repository, push to GitHub, and run `./deploy.sh` on your local machine.
 
-**To change config:** Edit `config.json` on the droplet and run `docker-compose restart bot admin`.
+**To change credentials:** Edit `config.json` on the droplet and run `docker-compose restart bot admin`.
 
 ## Maintenance
 
@@ -155,6 +157,12 @@ docker system prune -af
 
 ## Configuration
 
+The bot uses two configuration files:
+1. `config.json` (gitignored): Holds platform credentials and alerting settings.
+2. `watchlist.json` (committed): Holds the articles and Wikipedia language editions to monitor.
+
+### Credentials (`config.json`)
+
 Create `config.json` from the template:
 
 ```json
@@ -162,12 +170,6 @@ Create `config.json` from the template:
   "nick": "sfedits",
   "accounts": [{
     "template": "{{{page}}} Wikipedia article edited by {{{name}}} {{&url}}",
-    "watchlist": {
-      "English Wikipedia": {
-        "San Francisco Board of Supervisors": true,
-        "Daniel Lurie": true
-      }
-    },
     "bluesky": {
       "identifier": "your-username.bsky.social",
       "password": "your-app-password"
@@ -184,7 +186,33 @@ Create `config.json` from the template:
 }
 ```
 
-**Important:** Never commit `config.json` - it contains credentials and is gitignored. Update it directly on the droplet when you need to change the watchlist or credentials.
+**Important:** Never commit `config.json` because it contains secret credentials. Update credentials directly on the droplet when needed.
+
+### Watchlist (`watchlist.json`)
+
+The watchlist is stored in `watchlist.json` and tracked in git:
+
+```json
+{
+  "English Wikipedia": {
+    "San Francisco Board of Supervisors": true,
+    "Daniel Lurie": true,
+    "London Breed": true
+  }
+}
+```
+
+**Placeholder warning:** the committed `watchlist.json` currently contains only the 3 template titles above. It is a placeholder, not the production list. Replace it before deploying, or the bot will watch only those 3 titles. To replace it, run the migration script on the machine holding the real `config.json`:
+
+```bash
+node scripts/extract-watchlist.js
+```
+
+Commit the resulting `watchlist.json`, delete the `watchlist` key from each account in `config.json`, then deploy. If a deploy happens while `config.json` still carries an inline watchlist that differs from `watchlist.json`, the bot refuses to start with an error naming the conflict and the migration steps. It never silently drops titles.
+
+When `watchlist.json` is present, every account uses it: all accounts share one watchlist, and any per-account inline watchlist must match the file or the bot refuses to start.
+
+Edit `watchlist.json` in the repository rather than over SSH on the droplet. Deploy changes with `./deploy.sh` or restart the containers after pulling. Because the bot reads the watchlist at startup and does not hot reload, container restarts are required for watchlist updates to take effect.
 
 ### Bluesky Setup
 
@@ -345,6 +373,10 @@ node page-watch.js --noop   # Test mode - doesn't post
 node page-watch.js --verbose # Show all edit activity
 ```
 
+**Common flags:**
+- `--config <path>`: path to `config.json` (default: `./config.json`)
+- `--watchlist <path>`: path to `watchlist.json` (default: `watchlist.json` next to the config file)
+
 **Test mode (`--noop`):**
 - Monitors Wikipedia edits in real-time
 - Logs what would be posted
@@ -365,6 +397,8 @@ This script:
 - Fetches categories for each article in your English Wikipedia watchlist
 - Helps identify common category patterns (e.g., "San Francisco Board of Supervisors members")
 - Useful for expanding monitoring to other language Wikipedias
+
+Supports the same `--config` and `--watchlist` flags as the bot.
 
 ### `scripts/find-articles-in-categories.js`
 
@@ -397,6 +431,20 @@ This script:
 - Finds translations in other language Wikipedias
 - Shows language codes and translated article titles
 - Useful for expanding monitoring to multiple language Wikipedias
+
+Supports the same `--config` and `--watchlist` flags as the bot.
+
+### `scripts/extract-watchlist.js`
+
+Extracts the watchlist from an existing `config.json` into `watchlist.json`.
+
+```bash
+node scripts/extract-watchlist.js
+```
+
+Options:
+- `--config <path>`: Path to input config file (default: `./config.json`)
+- `--output <path>`: Path to output watchlist file (default: `./watchlist.json`)
 
 ## License
 

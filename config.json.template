@@ -3,13 +3,6 @@
   "accounts": [
     {
       "template": "{{{page}}} Wikipedia article edited by {{{name}}} {{&url}}",
-      "watchlist": {
-        "English Wikipedia": {
-          "San Francisco Board of Supervisors": true,
-          "Daniel Lurie": true,
-          "London Breed": true
-        }
-      },
       "bluesky": {
         "identifier": "your-username.bsky.social",
         "password": "your-app-password"

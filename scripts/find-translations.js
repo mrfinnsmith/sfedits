@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
 const https = require('https')
+const minimist = require('minimist')
+const { getConfig } = require('../lib/config')
 
-function getConfig() {
-  const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
-  return config
-}
+const argv = minimist(process.argv.slice(2), {
+  string: ['config', 'watchlist'],
+  default: {
+    config: './config.json',
+    watchlist: null
+  }
+})
 
 function getWikipediaTranslations(pageTitle, lang = 'en') {
   return new Promise((resolve, reject) => {
@@ -49,7 +53,7 @@ function getWikipediaTranslations(pageTitle, lang = 'en') {
 }
 
 async function main() {
-  const config = getConfig()
+  const config = getConfig(argv.config, argv.watchlist)
   
   console.log('Finding translations for all articles in config...\n')
   
