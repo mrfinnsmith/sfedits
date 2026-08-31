@@ -1,39 +1,37 @@
 # SF Edits Backfill Script
 
-A one-off Node script to load the SF Edits bot's complete historical post record into a Supabase table.
+A one-off Node script to load the SF Edits bot's complete published post history from the public
+Bluesky feed into the `wikipedia_edits` table. It ran to completion on 2026-08-31 (1,353 posts,
+1,348 rows); it is idempotent, so re-running it later only adds posts the table does not yet have.
 
 ## How to Run
 
-### Dry Run (Recommended First)
+Run from the repo root. The `.env` file has no `export` lines, so a plain `source .env` does not
+put the variables where `node` can see them; use `set -a`.
 
-Test parsing and see what would be inserted without making any changes:
+### Dry Run (Default)
+
+Parses the feed and reports what would be inserted. Needs no credentials:
 
 ```bash
 cd /path/to/sfedits
-source .env
-node backfill-edits.js --dry-run --from-cache /path/to/cache/dir
+node scripts/backfill-edits.js --dry-run
 ```
-
-The cache directory should contain the downloaded feed files: `feed_page_0.json` through `feed_page_13.json`.
 
 ### Commit to Supabase
 
 After confirming the dry-run output looks correct:
 
 ```bash
-source .env
-node backfill-edits.js --commit --from-cache /path/to/cache/dir
+set -a && source .env && set +a
+node scripts/backfill-edits.js --commit
 ```
 
-### Fetch Live (Not Using Cache)
+### Cached Feed Pages
 
-To fetch posts directly from the public AT Protocol endpoint instead of using cached files:
-
-```bash
-source .env
-node backfill-edits.js --dry-run
-node backfill-edits.js --commit
-```
+Both modes accept `--from-cache /path/to/cache/dir` to read previously downloaded feed files
+(`feed_page_0.json` through `feed_page_N.json`) instead of fetching from
+`public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed`.
 
 ## Parsing Logic
 
@@ -52,7 +50,7 @@ Each post text follows this exact pattern:
 - Capture the editor name/identifier (greedy, so it includes full names with spaces)
 - Capture the diff URL (anchored to start with `http://` or `https://`, ends at the first whitespace)
 
-The key fix: the editor group is greedy `(.+)` and the URL is anchored to `https?://\S+`, which means the split happens at the last space before the URL, not the first space after "edited by". This correctly handles editor names with spaces like `Ser Amantio di Nicolao`, `Roving Huntsman`, `Theodore Christopher`, etc.
+The key fix: the editor group is greedy `(.+)` and the URL is anchored to `https?://\S+`, which means the split happens at the last space before the URL, not the first space after "edited by". This correctly handles editor names with spaces like `Ser Amantio di Nicolao`, `Roving Huntsman`, `Theodore Christopher`, etc. The obvious non-greedy editor group splits at the first space instead and silently mangles 12% of the history.
 
 **Examples:**
 - `Gavin Newsom Wikipedia article edited by AUC2012 https://en.wikipedia.org/w/index.php?diff=1372098397&oldid=1372098328`
@@ -61,55 +59,36 @@ The key fix: the editor group is greedy `(.+)` and the URL is anchored to `https
 
 ### Language Extraction
 
-The script extracts the 2-letter language code from the diff URL hostname:
+The script extracts the language code from the diff URL hostname, the same derivation
+`lib/wiki-url.js` does for live edits:
 
 - `https://en.wikipedia.org/...` → `en`
 - `https://ru.wikipedia.org/...` → `ru`
 - `https://pt.wikipedia.org/...` → `pt`
 
-Regex: `https://([a-z]{2}(?:-[a-z]+)?)\./`
-
-For hyphenated codes (e.g., `en-GB`), only the language part is kept: `en`.
-
 ### Editor Handling
 
-**If the editor field is an IPv4 or IPv6 address (18 posts):**
+**If the editor field is an IPv4 or IPv6 address (18 posts in the original history):**
 - Set `editor` to `null`
 - Set `editor_country` to `null`
-- No country enrichment via MaxMind is performed (not worth blocking on, and would require additional setup)
+- No country enrichment via MaxMind is performed. The live bot derives a country at post time; the backfill cannot, because the IP's location may have changed since the edit and the script should not depend on MaxMind setup.
 
-**Examples of IP editors:**
-- `23.163.104.37`
-- `46.63.243.1`
-
-**Otherwise (1333 posts):**
+**Otherwise:**
 - Editor is the username as-is, preserving all spaces and punctuation
-- editor_country remains null (future enhancement possible)
-- 166 of these posts (12%) have editor names containing spaces
+- `editor_country` remains null (it is mutually exclusive with `editor` by table constraint)
 
-**Examples of editors with spaces:**
-- `Ser Amantio di Nicolao`
-- `Roving Huntsman`
-- `Theodore Christopher`
-- `Pac Veten`
-- `ClueBot NG`
-- `EVA3.0 (bot)`
-- `Servite et contribuere`
+## Supabase Write Path
 
-## Supabase RPC Call
-
-The script calls the `record_wikipedia_edit` RPC with these parameters:
+The script inserts over PostgREST, the same way `lib/edit-log.js` does:
 
 ```
-p_article_title    - Article title from the post
-p_lang             - 2-letter language code from URL
-p_diff_url         - Full diff URL (unique key)
-p_posted_at        - Post creation timestamp (ISO 8601)
-p_editor           - Username or null for IP addresses
-p_editor_country   - Always null in this version
+POST {SUPABASE_URL}/rest/v1/wikipedia_edits?on_conflict=diff_url
+Prefer: resolution=ignore-duplicates
 ```
 
-The RPC uses `ON CONFLICT (diff_url) DO NOTHING`, making it **idempotent**. Re-running the script is safe and will not create duplicates.
+Naming the conflict target matters: without `on_conflict=diff_url`, PostgREST arbitrates on the
+primary key and a duplicate returns 409 instead of doing nothing. With it, re-running the script
+is safe and creates no duplicates.
 
 ## Validation
 
@@ -119,153 +98,49 @@ The script validates each parsed edit to ensure correctness:
 2. **URL contains no spaces** - Ensures the URL was not mangled by the regex
 3. **URL contains 'diff='** - Ensures the URL contains the required diff parameter
 
-Any row failing validation is reported and counted separately from parse errors. All 1351 posts pass validation.
+Any row failing validation is reported and counted separately from parse errors. All posts in the
+original history pass validation.
 
 ## What This Script Does NOT Do
 
-1. **No IP geolocation** - IP addresses are detected but not enriched with country data. This is intentional to keep the script simple and independent of MaxMind setup.
+1. **No IP geolocation** - IP addresses are detected but not enriched with country data.
+2. **No screenshot parsing** - The script extracts data from post text only.
+3. **No text normalization** - Article titles and editor names are stored exactly as posted.
+4. **No deduplication** - Uniqueness is enforced by the database via `on_conflict=diff_url`.
+5. **No batching** - Rows are inserted sequentially with a small delay; the full history takes a
+   couple of minutes.
 
-2. **No screenshot parsing** - The script extracts data from post metadata only; it does not download or analyze screenshot images.
+## Duplicates Are Expected
 
-3. **No text normalization** - Article titles and editor names are stored exactly as they appear in the post (including Unicode, punctuation, spacing).
+The feed contains a handful of posts that repeat a diff URL (five in the original history: the
+same Wikipedia edit posted twice). The script submits every post; the database absorbs the
+repeats. The final row count therefore lands below the post count, and the script reports both
+numbers so there are no surprises.
 
-4. **No deduplication** - The Supabase RPC handles uniqueness via `ON CONFLICT (diff_url)`, not this script.
+## Verification
 
-5. **No rate limiting for writes** - The script inserts sequentially with a 10ms delay between requests. Adjust if Supabase applies stricter limits.
+After a commit run, compare the table against what the script reported:
 
-6. **No performance optimization** - Posts are fetched one at a time. For 1351 records this takes a few seconds; batching could make it faster but would complicate error handling.
-
-## Unique URLs and Deduplication
-
-The feed contains **1351 posts** but only **1346 unique diff URLs**. Five posts have duplicate URLs (the same Wikipedia edit was posted twice). The Supabase RPC handles this via `ON CONFLICT (diff_url) DO NOTHING`, so:
-
-- The script attempts to insert all 1351 rows
-- Only 1346 unique rows succeed (the 5 duplicates are absorbed by the ON CONFLICT clause)
-- The final row count in Supabase is **1346**, not 1351
-
-This is normal and expected. The script reports both the total posts submitted and the unique count so there are no surprises.
-
-## Verification Query
-
-After backfill completes, verify the row count in Supabase:
-
-```sql
-SELECT COUNT(*) as total_edits, COUNT(DISTINCT editor) as unique_editors, COUNT(*) FILTER (WHERE editor IS NULL) as ip_addresses
-FROM wikipedia_edits;
+```bash
+set -a && source .env && set +a
+curl -s -o /dev/null -D - \
+  -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
+  -H "Prefer: count=exact" -H "Range: 0-0" \
+  "$SUPABASE_URL/rest/v1/wikipedia_edits?select=id" | grep -i content-range
 ```
 
-Expected results:
-- `total_edits`: 1346 (unique diff URLs only)
-- `ip_addresses`: 18 (editors that were IP addresses)
-- `unique_editors`: The number of distinct non-null editor values (should be around 632, since 1346 - 18 IP editors)
-
-You can also check the date range:
-
-```sql
-SELECT MIN(posted_at) as earliest, MAX(posted_at) as latest, COUNT(*) as count
-FROM wikipedia_edits;
-```
-
-Expected:
-- `earliest`: 2025-02-18T22:17:00.541Z
-- `latest`: 2026-08-30T08:27:56.399Z
-- `count`: 1346
+The count after `/` should equal the script's "Unique diff URLs inserted" figure plus whatever
+the live bot has recorded since. On 2026-08-31 the backfill produced 1,348 rows spanning
+2025-02-18 to 2026-08-31. Further SQL checks are in `supabase/apply-and-verify.md`.
 
 ## Environment Variables
 
-The script requires three environment variables. Set them in `.env` and source it before running:
+Commit mode requires two variables, the same two the bot uses:
 
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your_public_key
-SUPABASE_EDITS_TOKEN=your_service_role_token
+SUPABASE_SECRET_KEY=sb_secret_...
 ```
 
-If any are missing, the script exits with a clear error message.
-
-## Output Example
-
-### Dry Run
-```
-Mode: dry-run
-Loading from cache: /path/to/cache
-
-Loaded 1351 posts from feed
-Parsed 1351 valid edits
-
-IP address editors (editor set to null): 18
-Editors with spaces in name: 166
-Unique diff URLs: 1346
-Posts with duplicate diff URLs: 5
-Date range: 2025-02-18T22:17:00.541Z to 2026-08-30T08:27:56.399Z
-
-=== DRY RUN MODE ===
-Would insert 1346 unique records into Supabase
-(5 posts have duplicate diff URLs and will be absorbed by ON CONFLICT)
-
-Sample records with editors containing spaces:
-
-1. Gavin Newsom
-   Editor: Ser Amantio di Nicolao
-   Language: en
-   Posted: 2026-08-29T11:24:49.963Z
-   URL: https://en.wikipedia.org/w/index.php?diff=1371927735&...
-
-2. Gavin Newsom
-   Editor: Ser Amantio di Nicolao
-   Language: en
-   Posted: 2026-08-29T09:39:13.258Z
-   URL: https://en.wikipedia.org/w/index.php?diff=1371919035&...
-
-3. George Moscone
-   Editor: Roving Huntsman
-   Language: en
-   Posted: 2026-08-28T03:20:47.339Z
-   URL: https://en.wikipedia.org/w/index.php?diff=1371728815&...
-
-4. George Moscone
-   Editor: Roving Huntsman
-   Language: en
-   Posted: 2026-08-28T03:19:59.870Z
-   URL: https://en.wikipedia.org/w/index.php?diff=1371728697&...
-
-5. Nancy Pelosi
-   Editor: Pac Veten
-   Language: en
-   Posted: 2026-08-26T03:42:34.428Z
-   URL: https://en.wikipedia.org/w/index.php?diff=1371378468&...
-
-No records were written. Run with --commit to insert.
-```
-
-### Commit Run
-```
-Mode: commit
-Loading from cache: /path/to/cache
-
-Loaded 1351 posts from feed
-Parsed 1351 valid edits
-
-IP address editors (editor set to null): 18
-Editors with spaces in name: 166
-Unique diff URLs: 1346
-Posts with duplicate diff URLs: 5
-Date range: 2025-02-18T22:17:00.541Z to 2026-08-30T08:27:56.399Z
-
-=== COMMIT MODE ===
-Inserting 1351 records (1346 unique diff URLs)...
-
-Progress: 100/1351 submitted
-Progress: 200/1351 submitted
-[...]
-Progress: 1300/1351 submitted
-
-=== SUMMARY ===
-Succeeded: 1351
-Failed: 0
-Total submitted: 1351
-Unique diff URLs inserted: 1346
-Duplicates absorbed by ON CONFLICT: 5
-
-Backfill complete!
-```
+If either is missing, the script exits with a clear error before touching the network. Dry-run
+mode needs neither.

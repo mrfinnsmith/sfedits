@@ -7,15 +7,15 @@
  * It does NOT run on the bot droplet (host Node v12).
  *
  * The script fetches the SF Edits bot's complete post history from the public AT Protocol
- * endpoint app.bsky.feed.getAuthorFeed and loads it into a Supabase table via the
- * record_wikipedia_edit RPC.
+ * endpoint app.bsky.feed.getAuthorFeed and loads it into a Supabase table over
+ * PostgREST, the same write path lib/edit-log.js uses.
  *
- * The Supabase RPC is idempotent via `on conflict (diff_url) do nothing`, so re-running
- * this script is safe.
+ * The insert targets on_conflict=diff_url with Prefer: resolution=ignore-duplicates,
+ * so re-running this script is safe.
  *
  * Usage:
- *   source .env && node backfill-edits.js --dry-run [--from-cache <dir>]
- *   source .env && node backfill-edits.js --commit [--from-cache <dir>]
+ *   node scripts/backfill-edits.js --dry-run [--from-cache <dir>]
+ *   set -a && source .env && set +a && node scripts/backfill-edits.js --commit [--from-cache <dir>]
  *
  * Flags:
  *   --dry-run           Parse and show summary without making write requests (default)
@@ -52,7 +52,7 @@ const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SECRET_KEY'];
 const missingEnvVars = requiredEnvVars.filter(v => !process.env[v]);
 if (mode === 'commit' && missingEnvVars.length > 0) {
   console.error(`Error: Missing required environment variables: ${missingEnvVars.join(', ')}`);
-  console.error('Set them via: source .env && node backfill-edits.js --commit');
+  console.error('Set them via: set -a && source .env && set +a && node scripts/backfill-edits.js --commit');
   process.exit(1);
 }
 
