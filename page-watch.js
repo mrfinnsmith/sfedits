@@ -15,6 +15,8 @@ const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
+const { getArticleUrl, getUserContributionsUrl } = require('./lib/wiki-url')
+const { recordEdit } = require('./lib/edit-log')
 
 const { getConfig, countWatchlist } = require('./lib/config')
 
@@ -41,27 +43,6 @@ function writeHeartbeat(name) {
   }
 }
 
-// Builds Wikipedia article URL from edit URL. Returns null if URL is malformed.
-function getArticleUrl(editUrl, pageName) {
-  try {
-    const url = new URL(editUrl)
-    const lang = url.hostname.split('.')[0]
-    return `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(pageName)}`
-  } catch {
-    return null
-  }
-}
-
-// Builds Wikipedia contributions URL from edit URL. Returns null if URL is malformed.
-function getUserContributionsUrl(editUrl, username) {
-  try {
-    const url = new URL(editUrl)
-    const lang = url.hostname.split('.')[0]
-    return `https://${lang}.wikipedia.org/wiki/Special:Contributions/${encodeURIComponent(username)}`
-  } catch {
-    return null
-  }
-}
 
 
 /**
@@ -402,6 +383,9 @@ async function sendStatus(account, statusData, edit) {
         }
 
         writeHeartbeat('post')
+
+        // Record only what actually went out. recordEdit never throws.
+        await recordEdit(edit)
       } finally {
         // Always clean up screenshot, even if posting fails
         if (screenshot && fs.existsSync(screenshot)) {

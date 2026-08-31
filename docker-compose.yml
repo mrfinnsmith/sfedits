@@ -19,6 +19,11 @@ services:
         condition: service_healthy
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # sfedits#7: records each published edit to the standalone sfedits
+      # Supabase project. Absent values disable recording, they do not
+      # stop the bot from posting.
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY}
     volumes:
       - ./config.json:/opt/sfedits/config.json:ro
       - ./watchlist.json:/opt/sfedits/watchlist.json:ro
