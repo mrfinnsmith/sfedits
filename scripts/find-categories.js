@@ -55,8 +55,8 @@ async function main() {
   console.log('Finding categories for all English Wikipedia articles in config...\n')
   
   for (const account of config.accounts) {
-    if (account.watchlist && account.watchlist['English Wikipedia']) {
-      const articles = Object.keys(account.watchlist['English Wikipedia'])
+    if (account.watchlist && account.watchlist['en']) {
+      const articles = Object.keys(account.watchlist['en'])
       
       console.log(`Found ${articles.length} English Wikipedia articles to analyze:\n`)
       

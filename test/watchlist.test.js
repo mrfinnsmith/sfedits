@@ -429,7 +429,7 @@ describe('Watchlist and Configuration Loading', function() {
         nick: 'testbot',
         accounts: [{
           template: 'test',
-          watchlist: { 'English Wikipedia': { 'Golden Gate Bridge': true } }
+          watchlist: { en: { 'Golden Gate Bridge': true } }
         }]
       }
       pageWatch.checkConfig(config, function(err) {

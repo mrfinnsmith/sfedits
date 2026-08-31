@@ -194,21 +194,20 @@ The watchlist is stored in `watchlist.json` and tracked in git:
 
 ```json
 {
-  "English Wikipedia": {
+  "en": {
     "San Francisco Board of Supervisors": true,
     "Daniel Lurie": true,
     "London Breed": true
+  },
+  "simple": {
+    "Kamala Harris": true
   }
 }
 ```
 
-**Placeholder warning:** the committed `watchlist.json` currently contains only the 3 template titles above. It is a placeholder, not the production list. Replace it before deploying, or the bot will watch only those 3 titles. To replace it, run the migration script on the machine holding the real `config.json`:
+Keys are language subdomain codes: the `en` in `en.wikipedia.org`, the `simple` in `simple.wikipedia.org`. Incoming edits are matched by the language code in their diff URL host, and the bot derives its IRC channel list (`#en.wikipedia`, ...) from these same keys, so every listed wiki is joined and matchable by construction. The bot refuses to start if any key is not a language subdomain code (for example, a display name like `"English Wikipedia"`, which is how 20 of 49 wikis went silently unwatched; see issue #9).
 
-```bash
-node scripts/extract-watchlist.js
-```
-
-Commit the resulting `watchlist.json`, delete the `watchlist` key from each account in `config.json`, then deploy. If a deploy happens while `config.json` still carries an inline watchlist that differs from `watchlist.json`, the bot refuses to start with an error naming the conflict and the migration steps. It never silently drops titles.
+The committed `watchlist.json` is the production list. If `config.json` still carries an inline watchlist that differs from `watchlist.json`, the bot refuses to start with an error naming the conflict and the migration steps. It never silently drops titles.
 
 When `watchlist.json` is present, every account uses it: all accounts share one watchlist, and any per-account inline watchlist must match the file or the bot refuses to start.
 

@@ -1,5 +1,5 @@
 {
-  "Arabic Wikipedia": {
+  "ar": {
     "نانسي بيلوسي": true,
     "غافن نيوسوم": true,
     "إدوين لي": true,
@@ -13,7 +13,7 @@
     "جورج غاسكون": true,
     "كامالا هاريس": true
   },
-  "French Wikipedia": {
+  "fr": {
     "Conseil des superviseurs de San Francisco": true,
     "Daniel Lurie": true,
     "Nancy Pelosi": true,
@@ -31,7 +31,7 @@
     "Kamala Harris": true,
     "San Francisco Police Department": true
   },
-  "German Wikipedia": {
+  "de": {
     "Daniel Lurie": true,
     "Scott Wiener": true,
     "Nancy Pelosi": true,
@@ -46,7 +46,7 @@
     "Art Agnos": true,
     "Kamala Harris": true
   },
-  "Spanish Wikipedia": {
+  "es": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "George Moscone": true,
@@ -55,7 +55,7 @@
     "Departamento de Policía de San Francisco": true,
     "Gobierno de San Francisco": true
   },
-  "Portuguese Wikipedia": {
+  "pt": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Edwin M. Lee": true,
@@ -71,7 +71,7 @@
     "Prefeito de São Francisco (Califórnia)": true,
     "Procurador de São Francisco": true
   },
-  "Chinese Wikipedia": {
+  "zh": {
     "舊金山參事委員會": true,
     "三藩市警察局": true,
     "南希·佩洛西": true,
@@ -82,7 +82,7 @@
     "博徹思": true,
     "賀錦麗": true
   },
-  "Japanese Wikipedia": {
+  "ja": {
     "サンフランシスコ市警察": true,
     "サンフランシスコ保安官局": true,
     "ナンシー・ペロシ": true,
@@ -93,7 +93,7 @@
     "ウィリー・ブラウン": true,
     "カマラ・ハリス": true
   },
-  "Korean Wikipedia": {
+  "ko": {
     "샌프란시스코 경찰국": true,
     "낸시 펠로시": true,
     "개빈 뉴섬": true,
@@ -102,7 +102,7 @@
     "윌리 브라운": true,
     "카멀라 해리스": true
   },
-  "Russian Wikipedia": {
+  "ru": {
     "Пелоси, Нэнси": true,
     "Ньюсом, Гэвин": true,
     "Ли, Эдвин Ма": true,
@@ -117,7 +117,7 @@
     "Харрис, Камала": true,
     "Департамент полиции Сан-Франциско": true
   },
-  "Italian Wikipedia": {
+  "it": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Ed Lee": true,
@@ -131,7 +131,7 @@
     "Kamala Harris": true,
     "San Francisco Police Department": true
   },
-  "English Wikipedia": {
+  "en": {
     "San Francisco Board of Supervisors": true,
     "Daniel Lurie": true,
     "Alan Wong (politician)": true,
@@ -186,7 +186,7 @@
     "Kamala Harris": true,
     "San Francisco Police Commission": true
   },
-  "Bulgarian Wikipedia": {
+  "bg": {
     "Санфранциски общински съвет": true,
     "Нанси Пелоси": true,
     "Гавин Нюсъм": true,
@@ -194,7 +194,7 @@
     "Камала Харис": true,
     "Полицейско управление на Сан Франциско": true
   },
-  "Simple English Wikipedia": {
+  "simple": {
     "San Francisco Board of Supervisors": true,
     "Daniel Lurie": true,
     "Nancy Pelosi": true,
@@ -213,7 +213,7 @@
     "San Francisco District Attorney's Office": true,
     "George Gascón": true
   },
-  "Hebrew Wikipedia": {
+  "he": {
     "דניאל לורי": true,
     "ננסי פלוסי": true,
     "גאווין ניוסם": true,
@@ -221,7 +221,7 @@
     "דיאן פיינסטיין": true,
     "קמלה האריס": true
   },
-  "Egyptian Arabic Wikipedia": {
+  "arz": {
     "نانسى بيلوسى": true,
     "جافن نيوسوم": true,
     "ادوين لى": true,
@@ -240,7 +240,7 @@
     "ديڤيد كيو": true,
     "جورج جاسكون": true
   },
-  "South Azerbaijani Wikipedia": {
+  "azb": {
     "نانسی پلوسی": true,
     "قوین نیوسام": true,
     "اد لی (سیاستچی)": true,
@@ -254,49 +254,49 @@
     "فیل تینق": true,
     "داوید چیو (سیاستچی)": true
   },
-  "Breton Wikipedia": {
+  "br": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Kamala Harris": true
   },
-  "Catalan Wikipedia": {
+  "ca": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Dianne Feinstein": true,
     "George Moscone": true,
     "Kamala Harris": true
   },
-  "Central Kurdish Wikipedia": {
+  "ckb": {
     "نانسی پیلۆسی": true,
     "گاڤین نیوسۆم": true,
     "کامڵا ھاریس": true
   },
-  "Czech Wikipedia": {
+  "cs": {
     "Nancy Pelosiová": true,
     "Gavin Newsom": true,
     "Dianne Feinsteinová": true,
     "Kamala Harrisová": true,
     "San Francisco Police Department": true
   },
-  "Danish Wikipedia": {
+  "da": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Greek Wikipedia": {
+  "el": {
     "Νάνσι Πελόζι": true,
     "Γκάβιν Νιούσομ": true,
     "Νταϊάν Φάινσταϊν": true,
     "Κάμαλα Χάρις": true
   },
-  "Esperanto Wikipedia": {
+  "eo": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Willie Brown (politikisto)": true,
     "Kamala Harris": true
   },
-  "Persian Wikipedia": {
+  "fa": {
     "نانسی پلوسی": true,
     "گوین نیوسام": true,
     "اد لی (سیاستمدار)": true,
@@ -311,7 +311,7 @@
     "چیسا بودین": true,
     "راس میرکریمی": true
   },
-  "Finnish Wikipedia": {
+  "fi": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Edwin M. Lee": true,
@@ -320,24 +320,24 @@
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Irish Wikipedia": {
+  "ga": {
     "Nancy Pelosi": true,
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Hungarian Wikipedia": {
+  "hu": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Armenian Wikipedia": {
+  "hy": {
     "Նենսի Փելոսի": true,
     "Լոնդոն Բրիդ": true,
     "Դայեն Ֆայնսթայն": true,
     "Քամալա Հարիս": true
   },
-  "Indonesian Wikipedia": {
+  "id": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Ed Lee": true,
@@ -347,13 +347,13 @@
     "Willie Brown": true,
     "Kamala Harris": true
   },
-  "Icelandic Wikipedia": {
+  "is": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Latin Wikipedia": {
+  "la": {
     "Nancy Pelosi": true,
     "Gavinus Newsom": true,
     "Edwinus Lee": true,
@@ -361,20 +361,20 @@
     "Diana Feinstein": true,
     "Kamala Harris": true
   },
-  "Latvian Wikipedia": {
+  "lv": {
     "Nensija Pelosi": true,
     "Gavins Ņūsoms": true,
     "Daiena Fainstaina": true,
     "Džordžs Moskone": true,
     "Kamala Harisa": true
   },
-  "Malay Wikipedia": {
+  "ms": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Norwegian Wikipedia": {
+  "no": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Ed Lee": true,
@@ -386,7 +386,7 @@
     "San Francisco Sheriff’s Department": true,
     "Joel Engardio": true
   },
-  "Dutch Wikipedia": {
+  "nl": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Ed Lee (politicus)": true,
@@ -397,34 +397,34 @@
     "Kamala Harris": true,
     "San Francisco Police Department": true
   },
-  "Polish Wikipedia": {
+  "pl": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Dianne Feinstein": true,
     "Kamala Harris": true
   },
-  "Romanian Wikipedia": {
+  "ro": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Kamala Harris": true
   },
-  "Serbo-Croatian Wikipedia": {
+  "sh": {
     "Nancy Pelosi": true,
     "Dianne Feinstein": true,
     "George Moscone": true,
     "Kamala Harris": true
   },
-  "Slovenian Wikipedia": {
+  "sl": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Kamala Harris": true
   },
-  "Serbian Wikipedia": {
+  "sr": {
     "Ненси Пелоси": true,
     "Гавин Њусом": true,
     "Камала Харис": true
   },
-  "Swedish Wikipedia": {
+  "sv": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Ed Lee": true,
@@ -433,7 +433,7 @@
     "Kamala Harris": true,
     "San Francisco Police Department": true
   },
-  "Turkish Wikipedia": {
+  "tr": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Ed Lee (siyasetçi)": true,
@@ -441,18 +441,18 @@
     "Kamala Harris": true,
     "George Gascón": true
   },
-  "Ukrainian Wikipedia": {
+  "uk": {
     "Ненсі Пелосі": true,
     "Ґевін Ньюсом": true,
     "Даян Файнштайн": true,
     "Камала Гарріс": true
   },
-  "Uzbek Wikipedia": {
+  "uz": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "Kamala Harris": true
   },
-  "Vietnamese Wikipedia": {
+  "vi": {
     "Nancy Pelosi": true,
     "Gavin Newsom": true,
     "London Breed": true,
@@ -460,19 +460,19 @@
     "Danny Sauter": true,
     "Rafael Mandelman": true
   },
-  "Cantonese Wikipedia": {
+  "zh-yue": {
     "佩洛西": true,
     "李孟賢": true,
     "賀錦麗": true
   },
-  "Old English Wikipedia": {
+  "ang": {
     "Gāwain Nīwhām": true
   },
-  "Occitan Wikipedia": {
+  "oc": {
     "Gavin Newsom": true,
     "Kamala Harris": true
   },
-  "Tagalog Wikipedia": {
+  "tl": {
     "Gavin Newsom": true,
     "Kamala Harris": true
   }

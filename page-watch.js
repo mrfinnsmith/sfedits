@@ -5,7 +5,7 @@ const async = require('async')
 const minimist = require('minimist')
 const Mastodon = require('mastodon')
 const Mustache = require('mustache')
-const { WikiChanges } = require('wikichanges')
+const { WikiChanges, channelForLang } = require('./lib/wiki-changes')
 const { saveDraft } = require('./lib/draft-manager')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
 const { takeScreenshot } = require('./lib/screenshot')
@@ -15,7 +15,7 @@ const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
-const { getArticleUrl, getUserContributionsUrl } = require('./lib/wiki-url')
+const { getArticleUrl, getUserContributionsUrl, langFromEditUrl } = require('./lib/wiki-url')
 const { recordEdit } = require('./lib/edit-log')
 
 const { getConfig, countWatchlist } = require('./lib/config')
@@ -398,10 +398,39 @@ async function sendStatus(account, statusData, edit) {
   }
 }
 
+// An edit matches on the language code in its diff URL host, never on a
+// display name: the IRC library's names drifted from the watchlist keys and
+// 20 of 49 wikis were silently unwatched for 18 months (issue #9).
+function matchesWatchlist(watchlist, edit) {
+  if (!watchlist || !edit || !edit.url) {
+    return false
+  }
+  const lang = langFromEditUrl(edit.url)
+  // Own-property checks: a bare watchlist[lang][edit.page] lookup would match
+  // Object.prototype members, so a page titled "Constructor" or "ToString"
+  // on any watched wiki would false-positive.
+  if (!lang || !Object.prototype.hasOwnProperty.call(watchlist, lang)) {
+    return false
+  }
+  const pages = watchlist[lang]
+  return Boolean(pages && Object.prototype.hasOwnProperty.call(pages, edit.page) && pages[edit.page])
+}
+
+// The IRC channels to join are derived from the watchlist keys themselves, so
+// every watched wiki is joined by construction.
+function channelsForConfig(config) {
+  const langs = new Set()
+  for (const account of config.accounts || []) {
+    for (const lang of Object.keys(account.watchlist || {})) {
+      langs.add(lang)
+    }
+  }
+  return Array.from(langs).sort().map(channelForLang)
+}
+
 async function inspect(account, edit) {
   if (edit.url) {
-    if (account.watchlist && account.watchlist[edit.wikipedia]
-      && account.watchlist[edit.wikipedia][edit.page]) {
+    if (matchesWatchlist(account.watchlist, edit)) {
       const statusData = getStatus(edit, edit.user, account.template)
       try {
         await sendStatus(account, statusData, edit)
@@ -425,6 +454,17 @@ function checkConfig(config, error) {
   if (!hasWatchedContent) {
     return error('resolved watchlist is empty: no account watches at least one wiki with at least one title; the bot would never post')
   }
+  // Every watchlist key must be reachable by the matching strategy: the key is
+  // the language subdomain of the diff URL host, so it must survive the round
+  // trip through langFromEditUrl. A display name like "English Wikipedia"
+  // would silently watch nothing (issue #9); refuse to start instead.
+  for (const account of config.accounts) {
+    for (const key of Object.keys(account.watchlist || {})) {
+      if (langFromEditUrl(`https://${key}.wikipedia.org/w/index.php`) !== key) {
+        return error(`watchlist key "${key}" is not a language subdomain code (like "en" or "simple"); edits matched by URL host can never reach it`)
+      }
+    }
+  }
   return async.each(config.accounts, (account, callback) => callback(), error)
 }
 
@@ -436,7 +476,10 @@ async function main() {
 
   return checkConfig(config, function (err) {
     if (!err) {
-      const wikipedia = new WikiChanges({ ircNickname: config.nick })
+      const wikipedia = new WikiChanges({
+        ircNickname: config.nick,
+        channels: channelsForConfig(config)
+      })
       return wikipedia.listen(edit => {
         writeHeartbeat('irc')
         if (argv.verbose) {
@@ -475,6 +518,8 @@ module.exports = {
   getArticleUrl,
   getUserContributionsUrl,
   buildFacets,
+  matchesWatchlist,
+  channelsForConfig,
   inspect,
   sendStatus,
   extractDiffText,

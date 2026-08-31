@@ -59,19 +59,9 @@ async function main() {
   
   for (const account of config.accounts) {
     if (account.watchlist) {
-      for (const [wikiName, articles] of Object.entries(account.watchlist)) {
-        console.log(`📚 ${wikiName}:\n`)
-        
-        // Extract language code from wiki name (e.g., "English Wikipedia" -> "en")
-        let langCode = 'en'
-        if (wikiName.includes('English')) langCode = 'en'
-        else if (wikiName.includes('Spanish')) langCode = 'es'
-        else if (wikiName.includes('French')) langCode = 'fr'
-        else if (wikiName.includes('German')) langCode = 'de'
-        else if (wikiName.includes('Chinese')) langCode = 'zh'
-        else if (wikiName.includes('Japanese')) langCode = 'ja'
-        // Add more language mappings as needed
-        
+      for (const [langCode, articles] of Object.entries(account.watchlist)) {
+        console.log(`📚 ${langCode}:\n`)
+
         const articleTitles = Object.keys(articles)
         
         for (const article of articleTitles) {

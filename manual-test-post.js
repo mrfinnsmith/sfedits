@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { getConfig, getStatus, sendStatus } = require('../page-watch')
+const { getConfig, getStatus, sendStatus } = require('./page-watch')
 
 const fakeEdit = {
     wikipedia: 'English Wikipedia',
@@ -14,8 +14,8 @@ const account = config.accounts[0]
 
 // Check if this page is in the watchlist
 if (account.watchlist &&
-    account.watchlist[fakeEdit.wikipedia] &&
-    account.watchlist[fakeEdit.wikipedia][fakeEdit.page]) {
+    account.watchlist['en'] &&
+    account.watchlist['en'][fakeEdit.page]) {
 
     const status = getStatus(fakeEdit, fakeEdit.user, account.template)
     sendStatus(account, status, fakeEdit)
