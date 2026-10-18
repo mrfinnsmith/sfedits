@@ -4,7 +4,7 @@ const express = require('express')
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
-const { takeScreenshot } = require('../lib/screenshot')
+const { captureDiffImage } = require('../lib/diff-image')
 const { createAuthenticatedAgent } = require('../lib/bluesky-client')
 const bluesky = require('../lib/bluesky-platform')
 const mastodon = require('../lib/mastodon-platform')
@@ -233,14 +233,12 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
     const results = []
     const postedTo = draft.posted_to || []
 
-    // Wait for Wikipedia diff table to fully render (same delay as bot)
-    await new Promise(r => setTimeout(r, 2000))
-
-    // Take screenshot for posting (admin console doesn't save it in draft)
-    const screenshot = await takeScreenshot(draft.diff_url)
-    if (!screenshot) {
+    // Render diff for posting (admin console doesn't save it in draft)
+    const capture = await captureDiffImage(draft.diff_url, draft.article)
+    if (!capture) {
       throw new Error('Failed to capture screenshot')
     }
+    const screenshot = capture.screenshot
 
     try {
       // Prepare metadata for posting
@@ -248,7 +246,8 @@ app.post('/api/drafts/:id/post', requireAuth, async (req, res) => {
         page: draft.article,
         name: draft.status_data.name,
         pageUrl: draft.status_data.pageUrl,
-        userUrl: draft.status_data.userUrl
+        userUrl: draft.status_data.userUrl,
+        altText: capture.altText
       }
 
       // Post to Bluesky if configured and not already posted
