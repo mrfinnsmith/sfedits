@@ -57,9 +57,11 @@ const WIKI_REQUEST_DELAY_MS = 500;
 const SUPABASE_PAGE_SIZE = 1000;
 
 // Since January 2026 Wikipedia shows logged-out editors as temporary accounts
-// ("~2026-42504-55"). Same pattern lib/wiki-changes.js uses. Kept local rather
-// than imported because #24 may move that rule into an exported helper.
-const TEMPORARY_ACCOUNT_PATTERN = /^~\d{4}-\d+-\d+$/;
+// ("~2026-42504-55"). Some wikis, such as Czech Wikipedia, use a shorter form
+// with only one dash group ("~2026-67040"). Same pattern lib/editor-identity.js
+// uses. Kept local rather than imported because #24 may move that rule into an
+// exported helper.
+const TEMPORARY_ACCOUNT_PATTERN = /^~\d{4}-\d+(-\d+)?$/;
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 

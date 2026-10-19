@@ -68,9 +68,14 @@ describe('scripts/backfill-editors', function() {
       assert.isTrue(isAnonymousName('2600:1700:5A40:2010:B0D7:1C4E:7A0B:1F2C'))
       assert.isTrue(isAnonymousName('~2026-42504-55'))
     })
+    it('is true for short temporary-account names with one dash group', function() {
+      assert.isTrue(isAnonymousName('~2026-67040'))
+    })
     it('is false for registered names, including ones that look a bit like the patterns', function() {
+      assert.isFalse(isAnonymousName('Patandor'))
       assert.isFalse(isAnonymousName('AUC2012'))
       assert.isFalse(isAnonymousName('Theodore Christopher'))
+      assert.isFalse(isAnonymousName('~Foo'))
       assert.isFalse(isAnonymousName('~Tilde'))
       assert.isFalse(isAnonymousName('1.2.3'))
     })
