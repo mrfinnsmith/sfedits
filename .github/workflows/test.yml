@@ -1,0 +1,28 @@
+# Run the bot's test suite (mocha, test/) on every pull request and every push
+# to main, so a change is marked pass or fail before it merges. Runs only on
+# GitHub's machines; it changes nothing in the bot or its server.
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - run: npm test
