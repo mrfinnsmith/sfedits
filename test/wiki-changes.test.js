@@ -65,6 +65,34 @@ describe('lib/wiki-changes', function() {
       assert.isTrue(edit.anonymous)
     })
 
+    it('marks Wikipedia temporary accounts as anonymous', function() {
+      const raw = buildRawMessage({
+        page: 'Test Page',
+        url: 'https://en.wikipedia.org/w/index.php?diff=1&oldid=2',
+        user: '~2026-42504-55',
+        delta: '(+1)',
+        comment: 'edit'
+      })
+      const edit = parseMessage('#en.wikipedia', raw)
+
+      assert.isNotNull(edit)
+      assert.isTrue(edit.anonymous)
+    })
+
+    it('does not mark a registered name that only starts with a tilde as anonymous', function() {
+      const raw = buildRawMessage({
+        page: 'Test Page',
+        url: 'https://en.wikipedia.org/w/index.php?diff=1&oldid=2',
+        user: '~Tilde',
+        delta: '(+1)',
+        comment: 'edit'
+      })
+      const edit = parseMessage('#en.wikipedia', raw)
+
+      assert.isNotNull(edit)
+      assert.isFalse(edit.anonymous)
+    })
+
     it('detects robot and newPage flags', function() {
       const raw = buildRawMessage({
         page: 'Test Page',

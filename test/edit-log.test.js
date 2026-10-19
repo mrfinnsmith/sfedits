@@ -67,6 +67,13 @@ describe('edit-log', function() {
     assert.notInclude(JSON.stringify(calls[0].body), '8.8.8.8')
   })
 
+  it('records a temporary account as anonymous with no name and no country', async function() {
+    await recordEdit({ ...EDIT, user: '~2026-42504-55', anonymous: true })
+    assert.isNull(calls[0].body.editor)
+    assert.isNull(calls[0].body.editor_country)
+    assert.notInclude(JSON.stringify(calls[0].body), '~2026-42504-55')
+  })
+
   it('sends nothing when the diff url is malformed', async function() {
     await recordEdit({ ...EDIT, url: 'not-a-url' })
     assert.lengthOf(calls, 0)
