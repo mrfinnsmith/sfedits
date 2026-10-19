@@ -1,6 +1,15 @@
 const { describe, it, beforeEach, afterEach } = require('mocha')
 const { assert } = require('chai')
-const { recordEdit } = require('../lib/edit-log')
+const proxyquire = require('proxyquire')
+
+// The country lookup is stubbed so these tests do not depend on the MaxMind
+// database: it records which addresses were looked up and answers 'US'.
+const lookups = []
+const { recordEdit } = proxyquire('../lib/edit-log', {
+  './geolocation': {
+    getCountryCode: async (ip) => { lookups.push(ip); return 'US' }
+  }
+})
 
 // recordEdit talks to Supabase over global fetch and reads its credentials from
 // the environment, so both are swapped out here. The contract under test is not
@@ -20,6 +29,7 @@ describe('edit-log', function() {
   beforeEach(function() {
     calls = []
     logged = []
+    lookups.length = 0
     originalFetch = global.fetch
     originalEnv = {
       url: process.env.SUPABASE_URL,
@@ -55,23 +65,49 @@ describe('edit-log', function() {
     assert.isString(calls[0].body.posted_at)
   })
 
-  it('records a registered editor by name and no country', async function() {
+  it('records a registered editor by name, not anonymous, with no IP or country', async function() {
     await recordEdit(EDIT)
     assert.equal(calls[0].body.editor, 'SomeEditor')
+    assert.isNull(calls[0].body.ip)
+    assert.isFalse(calls[0].body.anonymous)
     assert.isNull(calls[0].body.editor_country)
+    assert.lengthOf(lookups, 0)
   })
 
-  it('never sends the IP address of an anonymous editor', async function() {
+  it('records an IPv4 editor by name and IP, anonymous, with a country', async function() {
     await recordEdit({ ...EDIT, user: '8.8.8.8', anonymous: true })
-    assert.isNull(calls[0].body.editor)
-    assert.notInclude(JSON.stringify(calls[0].body), '8.8.8.8')
+    assert.equal(calls[0].body.editor, '8.8.8.8')
+    assert.equal(calls[0].body.ip, '8.8.8.8')
+    assert.isTrue(calls[0].body.anonymous)
+    assert.equal(calls[0].body.editor_country, 'US')
+    assert.deepEqual(lookups, ['8.8.8.8'])
   })
 
-  it('records a temporary account as anonymous with no name and no country', async function() {
+  it('records an IPv6 editor by name and IP, anonymous, with a country', async function() {
+    const ipv6 = '2001:4860:4860:0:0:0:0:8888'
+    await recordEdit({ ...EDIT, user: ipv6, anonymous: true })
+    assert.equal(calls[0].body.editor, ipv6)
+    assert.equal(calls[0].body.ip, ipv6)
+    assert.isTrue(calls[0].body.anonymous)
+    assert.equal(calls[0].body.editor_country, 'US')
+    assert.deepEqual(lookups, [ipv6])
+  })
+
+  it('records a temporary account by name, anonymous, with no IP or country', async function() {
     await recordEdit({ ...EDIT, user: '~2026-42504-55', anonymous: true })
-    assert.isNull(calls[0].body.editor)
+    assert.equal(calls[0].body.editor, '~2026-42504-55')
+    assert.isNull(calls[0].body.ip)
+    assert.isTrue(calls[0].body.anonymous)
     assert.isNull(calls[0].body.editor_country)
-    assert.notInclude(JSON.stringify(calls[0].body), '~2026-42504-55')
+    assert.lengthOf(lookups, 0)
+  })
+
+  it('swallows a failed country lookup', async function() {
+    const { recordEdit: recordWithBrokenGeo } = proxyquire('../lib/edit-log', {
+      './geolocation': { getCountryCode: async () => { throw new Error('bad db') } }
+    })
+    await recordWithBrokenGeo({ ...EDIT, user: '8.8.8.8', anonymous: true })
+    assert.lengthOf(calls, 0)
   })
 
   it('sends nothing when the diff url is malformed', async function() {
