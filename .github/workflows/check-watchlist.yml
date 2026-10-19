@@ -9,12 +9,14 @@ on:
       - watchlist.json
       - topics.json
       - scripts/check-watchlist.js
+      - .github/workflows/check-watchlist.yml
   push:
     branches: [main]
     paths:
       - watchlist.json
       - topics.json
       - scripts/check-watchlist.js
+      - .github/workflows/check-watchlist.yml
   workflow_dispatch:
 
 permissions:
