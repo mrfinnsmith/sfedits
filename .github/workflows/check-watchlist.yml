@@ -1,0 +1,38 @@
+# Check the watchlist against topics.json and live Wikidata/Wikipedia whenever
+# either file changes (sfedits#13). Catches disambiguation pages, moved or
+# deleted articles, and non-person items flagged as people before they merge.
+name: Check watchlist
+
+on:
+  pull_request:
+    paths:
+      - watchlist.json
+      - topics.json
+      - scripts/check-watchlist.js
+      - .github/workflows/check-watchlist.yml
+  push:
+    branches: [main]
+    paths:
+      - watchlist.json
+      - topics.json
+      - scripts/check-watchlist.js
+      - .github/workflows/check-watchlist.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - run: node scripts/check-watchlist.js
