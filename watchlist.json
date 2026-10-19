@@ -7,7 +7,6 @@
     "كريس دالي (سياسي)": true,
     "ديان فاينستاين": true,
     "فيلي براون (سياسي)": true,
-    "فيلي براون (توضيح)": true,
     "فرانك جوردن (سياسي)": true,
     "ديفيد تشيو (سياسي)": true,
     "جورج غاسكون": true,
@@ -24,7 +23,6 @@
     "Maire de San Francisco": true,
     "Dianne Feinstein": true,
     "Willie Brown (homme politique)": true,
-    "Willie Brown": true,
     "George Moscone": true,
     "Art Agnos": true,
     "Frank Jordan": true,
@@ -38,10 +36,8 @@
     "Gavin Newsom": true,
     "Edwin M. Lee": true,
     "London Breed": true,
-    "Mark Farrell": true,
     "Dianne Feinstein": true,
     "Willie Brown (Politiker)": true,
-    "Willie Brown": true,
     "George Moscone": true,
     "Art Agnos": true,
     "Kamala Harris": true
@@ -90,7 +86,6 @@
     "エドウィン・リー": true,
     "サンフランシスコ市長": true,
     "ダイアン・ファインスタイン": true,
-    "ウィリー・ブラウン": true,
     "カマラ・ハリス": true
   },
   "ko": {
@@ -99,7 +94,6 @@
     "개빈 뉴섬": true,
     "다이앤 파인스타인": true,
     "윌리 브라운 (정치인)": true,
-    "윌리 브라운": true,
     "카멀라 해리스": true
   },
   "ru": {
@@ -108,7 +102,6 @@
     "Ли, Эдвин Ма": true,
     "Брид, Лондон": true,
     "Фаррелл, Марк (политик)": true,
-    "Фаррелл, Марк": true,
     "Файнстайн, Дайэнн": true,
     "Браун, Уилли Льюис (младший)": true,
     "Москоне, Джордж": true,
@@ -124,7 +117,6 @@
     "London Breed": true,
     "Dianne Feinstein": true,
     "Willie Brown (politico)": true,
-    "Willie Brown": true,
     "George Moscone": true,
     "Art Agnos": true,
     "Frank Jordan": true,
@@ -161,7 +153,7 @@
     "Aaron Peskin": true,
     "Chris Daly": true,
     "Ross Mirkarimi": true,
-    "David Campos": true,
+    "David Campos (politician)": true,
     "San Francisco Department of Public Works corruption scandal": true,
     "Mohammed Nuru": true,
     "San Francisco graft trials": true,
@@ -183,8 +175,7 @@
     "José Cisneros": true,
     "George Gascón": true,
     "Chesa Boudin": true,
-    "Kamala Harris": true,
-    "San Francisco Police Commission": true
+    "Kamala Harris": true
   },
   "bg": {
     "Санфранциски общински съвет": true,
@@ -204,7 +195,6 @@
     "Mayor of San Francisco": true,
     "Dianne Feinstein": true,
     "Willie Brown (politician)": true,
-    "Willie Brown": true,
     "George Moscone": true,
     "Art Agnos": true,
     "Frank Jordan": true,
@@ -303,7 +293,6 @@
     "لاندن برید": true,
     "داین فاینستاین": true,
     "ویلی براون (سیاست‌مدار)": true,
-    "ویلی براون": true,
     "جرج ماسکونی": true,
     "کامالا هریس": true,
     "اسکات وینر": true,
@@ -392,7 +381,6 @@
     "Ed Lee (politicus)": true,
     "Dianne Feinstein": true,
     "Willie Brown (politicus)": true,
-    "Willie Brown": true,
     "George Moscone": true,
     "Kamala Harris": true,
     "San Francisco Police Department": true
