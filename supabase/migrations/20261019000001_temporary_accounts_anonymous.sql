@@ -1,23 +1,17 @@
--- sfedits#17: one-time fix for edits by Wikipedia temporary accounts.
+-- RETIRED (sfedits#25). This migration intentionally does nothing.
 --
--- Since January 2026 Wikipedia shows logged-out editors as temporary accounts
--- ("~2026-42504-55") instead of IP addresses. Until sfedits#14 the bot stored
--- those edits as registered: editor = the temporary-account name, no country.
--- This makes them look like every other anonymous row: editor null. The
--- country stays null because these edits never had an IP to look up.
+-- It used to be the sfedits#17 one-time fix, run once in the Supabase SQL
+-- editor: `update public.wikipedia_edits set editor = null where editor ~
+-- '^~[0-9]{4}-[0-9]+-[0-9]+$'`. That erased the temporary-account names
+-- ("~2026-42504-55") from past edits.
 --
--- Run it once, after the bot with the #14 fix is deployed, so no new wrong
--- rows arrive afterwards. Clearing the names can't be undone here, but the
--- same names are still in the public Bluesky posts.
+-- It was superseded by sfedits#22 (editor keeps the username exactly as
+-- Wikipedia gives it, plus new ip and anonymous columns) and sfedits#25
+-- (scripts/backfill-editors.js restores the names from Wikipedia). Replaying
+-- the old update, for example through `supabase db push`, would erase the
+-- restored names again, so its body is removed.
 --
--- The bot's key has no UPDATE on this table on purpose (see the first
--- migration), so this runs as postgres: Supabase SQL editor or
--- `supabase db push`. Safe to run twice: the second run matches nothing.
+-- The file and its version are kept so local and remote migration history
+-- stay in sync if this version was ever recorded.
 
-update public.wikipedia_edits
-   set editor = null
- where editor ~ '^~[0-9]{4}-[0-9]+-[0-9]+$';
-
--- Check afterwards; expect 0:
---   select count(*) from public.wikipedia_edits
---    where editor ~ '^~[0-9]{4}-[0-9]+-[0-9]+$';
+select 1;
