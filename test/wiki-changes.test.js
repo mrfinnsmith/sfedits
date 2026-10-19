@@ -79,6 +79,20 @@ describe('lib/wiki-changes', function() {
       assert.isTrue(edit.anonymous)
     })
 
+    it('marks short temporary-account names with one dash group as anonymous', function() {
+      const raw = buildRawMessage({
+        page: 'Test Page',
+        url: 'https://cs.wikipedia.org/w/index.php?diff=1&oldid=2',
+        user: '~2026-67040',
+        delta: '(+1)',
+        comment: 'edit'
+      })
+      const edit = parseMessage('#cs.wikipedia', raw)
+
+      assert.isNotNull(edit)
+      assert.isTrue(edit.anonymous)
+    })
+
     it('does not mark a registered name that only starts with a tilde as anonymous', function() {
       const raw = buildRawMessage({
         page: 'Test Page',
@@ -91,6 +105,22 @@ describe('lib/wiki-changes', function() {
 
       assert.isNotNull(edit)
       assert.isFalse(edit.anonymous)
+    })
+
+    it('does not mark names that are not temporary-account patterns as anonymous', function() {
+      for (const user of ['Patandor', '~Foo']) {
+        const raw = buildRawMessage({
+          page: 'Test Page',
+          url: 'https://en.wikipedia.org/w/index.php?diff=1&oldid=2',
+          user,
+          delta: '(+1)',
+          comment: 'edit'
+        })
+        const edit = parseMessage('#en.wikipedia', raw)
+
+        assert.isNotNull(edit)
+        assert.isFalse(edit.anonymous, user)
+      }
     })
 
     it('detects robot and newPage flags', function() {
