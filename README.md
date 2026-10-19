@@ -213,6 +213,16 @@ When `watchlist.json` is present, every account uses it: all accounts share one 
 
 Edit `watchlist.json` in the repository rather than over SSH on the droplet. Deploy changes with `./deploy.sh` or restart the containers after pulling. Because the bot reads the watchlist at startup and does not hot reload, container restarts are required for watchlist updates to take effect.
 
+### Topics (`topics.json`) and the watchlist check
+
+The bot only sees article titles, so a moved, deleted or disambiguated article silently stops matching (issue #13). `topics.json` lists what we actually watch: each entry is a Wikidata item, its label, whether it is a person, and the wikis to watch it on:
+
+```json
+{"id": "Q12054131", "label": "David Campos", "person": true, "wikis": ["en"]}
+```
+
+`node scripts/check-watchlist.js` looks up each item's current article title on each listed wiki (Wikidata sitelinks follow page moves) and fails if `watchlist.json` doesn't match exactly, or if a topic is a disambiguation item, a person flag disagrees with Wikidata's P31 human, or an article is missing, a redirect, or a disambiguation page. When you add or remove a watched article, change `topics.json` and `watchlist.json` together and run the check.
+
 ### Bluesky Setup
 
 To set up Bluesky posting and PII alert DMs:
