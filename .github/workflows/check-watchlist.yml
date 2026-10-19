@@ -1,6 +1,8 @@
 # Check the watchlist against topics.json and live Wikidata/Wikipedia whenever
 # either file changes (sfedits#13). Catches disambiguation pages, moved or
 # deleted articles, and non-person items flagged as people before they merge.
+# New language versions of a topic are printed as suggestions and never fail
+# this check; the weekly workflow files them as an issue (sfedits#23).
 name: Check watchlist
 
 on:
@@ -8,6 +10,7 @@ on:
     paths:
       - watchlist.json
       - topics.json
+      - declined.json
       - scripts/check-watchlist.js
       - .github/workflows/check-watchlist.yml
   push:
@@ -15,6 +18,7 @@ on:
     paths:
       - watchlist.json
       - topics.json
+      - declined.json
       - scripts/check-watchlist.js
       - .github/workflows/check-watchlist.yml
   workflow_dispatch:

@@ -1,0 +1,63 @@
+# Weekly run of the watchlist check (sfedits#23), so the watchlist can't drift
+# silently when Wikipedia changes. Reports problems in watched articles and new
+# language versions of tracked topics (any language). When nothing is found it
+# does nothing. When anything is found it files one issue labelled
+# watchlist-check, or updates the open one instead of filing another.
+# It never edits watchlist.json and never deploys.
+name: Weekly watchlist check
+
+on:
+  schedule:
+    - cron: '17 16 * * 1' # Mondays 16:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: weekly-watchlist-check
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      # Exit 1 (problems found) still goes to the issue step; exit 2 (the
+      # check itself failed, e.g. an API error) fails the run.
+      - name: Run the watchlist check
+        run: |
+          set +e
+          node scripts/check-watchlist.js --report "$RUNNER_TEMP/watchlist-report.md"
+          code=$?
+          if [ "$code" -ge 2 ]; then exit "$code"; fi
+          exit 0
+      - name: File or update the watchlist-check issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REPORT: ${{ runner.temp }}/watchlist-report.md
+          TITLE: Weekly watchlist check found changes
+          LABEL: watchlist-check
+        run: |
+          if [ ! -f "$REPORT" ]; then
+            echo "Nothing found."
+            exit 0
+          fi
+          gh label create "$LABEL" --color FBCA04 \
+            --description "Found by the weekly watchlist check" 2>/dev/null || true
+          number=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --title "$TITLE" --body-file "$REPORT"
+            echo "Updated issue #$number"
+          else
+            gh issue create --title "$TITLE" --label "$LABEL" --body-file "$REPORT"
+          fi
