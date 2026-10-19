@@ -223,6 +223,14 @@ The bot only sees article titles, so a moved, deleted or disambiguated article s
 
 `node scripts/check-watchlist.js` looks up each item's current article title on each listed wiki (Wikidata sitelinks follow page moves) and fails if `watchlist.json` doesn't match exactly, or if a topic is a disambiguation item, a person flag disagrees with Wikidata's P31 human, or an article is missing, a redirect, or a disambiguation page. When you add or remove a watched article, change `topics.json` and `watchlist.json` together and run the check.
 
+The check also lists new language versions: Wikipedia articles a topic has in any language that `topics.json` doesn't watch it on yet. There is no language filter, so a version on a wiki the bot has never watched is listed the same way (adding its key to `watchlist.json` is enough: the bot joins every wiki listed there). Only Wikipedia sitelinks count (Commons, Wikiquote, Wikisource and so on are ignored), and the wiki key is taken from the sitelink's URL host, which is the format `watchlist.json` uses: Wikidata's `zh_yuewiki` is `zh-yue`, and `be_x_oldwiki` is `be-tarask`. New versions are suggestions: they never fail the check.
+
+`declined.json` lists language versions we decided not to watch, so they stop being suggested. Each entry is `{"id": "Q123", "wiki": "tlh", "note": "optional reason"}`; the check rejects malformed entries, entries for unknown topics, and entries for a wiki the topic is watched on.
+
+Options: `--topics`, `--watchlist`, `--declined` (file paths), and `--report <file>`, which writes a Markdown issue body listing every problem and new version with the proposed `watchlist.json` and `topics.json` change, only when there is something to report. Exit code 0 means no problems (new versions may still be listed), 1 means problems, 2 means the check itself failed.
+
+CI runs the check whenever `watchlist.json`, `topics.json` or `declined.json` changes (`.github/workflows/check-watchlist.yml`). A weekly workflow (`.github/workflows/weekly-watchlist-check.yml`, Mondays, or run by hand) runs it with `--report`; if anything is found it files one issue labelled `watchlist-check`, or updates the open one. It never edits the watchlist or deploys.
+
 ### Bluesky Setup
 
 To set up Bluesky posting and PII alert DMs:
