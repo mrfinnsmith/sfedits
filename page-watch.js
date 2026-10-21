@@ -3,20 +3,19 @@
 const fs = require('fs')
 const async = require('async')
 const minimist = require('minimist')
-const Mastodon = require('mastodon')
 const Mustache = require('mustache')
 const { WikiChanges, channelForLang } = require('./lib/wiki-changes')
 const { saveDraft } = require('./lib/draft-manager')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
 const { takeScreenshot } = require('./lib/screenshot')
 const { buildFacets } = require('./lib/bluesky-utils')
-const { createAuthenticatedAgent } = require('./lib/bluesky-client')
 const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
 const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
 const { getArticleUrl, getUserContributionsUrl, langFromEditUrl } = require('./lib/wiki-url')
 const { recordEdit } = require('./lib/edit-log')
+const { sendBlueskyDm, sendMastodonDm } = require('./lib/dm-alert')
 
 const { getConfig, countWatchlist } = require('./lib/config')
 
@@ -137,94 +136,55 @@ function logBlockedEdit(edit, statusData, piiResult) {
 }
 
 /**
- * Send DM alert via Bluesky
- * Uses api.bsky.chat service directly (not routed through bsky.social PDS)
+ * Send PII DM alert via Bluesky
  */
 async function sendBlueskyAlert(account, edit, statusData, _piiResult) {
-  if (!account.pii_alerts?.bluesky_recipient) return
-
+  // Build facets for clickable links (same as regular post)
+  const alertText = `PII: ${statusData.text}`
+  let facets
   try {
-    const agent = await createAuthenticatedAgent(account.bluesky)
-    const accessJwt = agent.session.accessJwt
-
-    // Build facets for clickable links (same as regular post)
-    const alertText = `PII: ${statusData.text}`
-    const facets = buildFacets(
+    facets = buildFacets(
       alertText,
       statusData.page,
       statusData.name,
       statusData.pageUrl,
       statusData.userUrl
     )
-
-    // Get conversation - chat API is at api.bsky.chat
-    const convoResponse = await fetch('https://api.bsky.chat/xrpc/chat.bsky.convo.listConvos?limit=100', {
-      headers: {
-        'Authorization': `Bearer ${accessJwt}`
-      }
-    })
-
-    const convosData = await convoResponse.json()
-
-    if (convosData.error) {
-      console.error('Failed to list Bluesky conversations:', convosData.error)
-      return
-    }
-
-    const convo = convosData.convos.find(c =>
-      c.members.some(m => m.handle === account.pii_alerts.bluesky_recipient)
-    )
-
-    if (!convo) {
-      console.error(`No existing Bluesky conversation with ${account.pii_alerts.bluesky_recipient}`)
-      return
-    }
-
-    // Send message - chat API is at api.bsky.chat
-    await fetch('https://api.bsky.chat/xrpc/chat.bsky.convo.sendMessage', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessJwt}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        convoId: convo.id,
-        message: {
-          text: alertText,
-          facets: facets
-        }
-      })
-    })
-
-    console.log('✓ Bluesky alert sent')
   } catch (error) {
     console.error('Bluesky alert failed:', error.message)
+    return
   }
+
+  await sendBlueskyDm(account, alertText, facets)
 }
 
 /**
- * Send DM alert via Mastodon
+ * Send PII DM alert via Mastodon
  */
 async function sendMastodonAlert(account, edit, statusData, _piiResult) {
-  if (!account.pii_alerts?.mastodon_recipient) return
+  // Same message as regular post, just prefixed with "PII: "
+  await sendMastodonDm(account, `PII: ${statusData.text}`)
+}
+
+// DM the owner once when posting has failed this many times in a row.
+const POST_FAILURE_ALERT_THRESHOLD = 2
+let consecutiveFailures = 0
+
+/**
+ * Count a failed post and DM the owner when the streak reaches the threshold.
+ * Alerts exactly once per streak; a successful post resets it. The message
+ * carries only the error text, never the edit. Never throws.
+ */
+async function recordPostFailure(account, error) {
+  consecutiveFailures++
+  if (consecutiveFailures !== POST_FAILURE_ALERT_THRESHOLD) return
 
   try {
-    const M = new Mastodon({
-      access_token: account.mastodon.access_token,
-      api_url: account.mastodon.instance + '/api/v1/'
-    })
-
-    // Same message as regular post, just prefixed with "PII: "
-    const alertText = `PII: ${statusData.text}`
-
-    await M.post('statuses', {
-      status: `@${account.pii_alerts.mastodon_recipient} ${alertText}`,
-      visibility: 'direct'
-    })
-
-    console.log('✓ Mastodon alert sent')
-  } catch (error) {
-    console.error('Mastodon alert failed:', error.message)
+    const alertText = `sfedits: ${POST_FAILURE_ALERT_THRESHOLD} posts in a row failed. Last error: ${error && error.message}`
+    await sendBlueskyDm(account, alertText)
+    await sendMastodonDm(account, alertText)
+  } catch (alertError) {
+    console.error('Failure alert failed:', alertError.message)
   }
 }
 
@@ -383,6 +343,7 @@ async function sendStatus(account, statusData, edit) {
         }
 
         writeHeartbeat('post')
+        consecutiveFailures = 0
 
         // Record only what actually went out. recordEdit never throws.
         await recordEdit(edit)
@@ -395,6 +356,7 @@ async function sendStatus(account, statusData, edit) {
     }
   } catch (error) {
     console.error('Posting failed:', error)
+    await recordPostFailure(account, error)
   }
 }
 
@@ -522,6 +484,8 @@ module.exports = {
   channelsForConfig,
   inspect,
   sendStatus,
+  sendBlueskyAlert,
+  sendMastodonAlert,
   extractDiffText,
   analyzeForPII,
   screenForPII
