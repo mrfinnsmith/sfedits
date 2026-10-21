@@ -1,10 +1,9 @@
-FROM node:20-slim
+FROM node:22-bookworm-slim
 
 WORKDIR /opt/sfedits
 
 # Install system dependencies for Puppeteer
 RUN apt-get update && apt-get install -y \
-    chromium \
     libgconf-2-4 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
@@ -16,14 +15,23 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fonts-noto-core \
     xvfb \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
-
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Copy package files and install dependencies
 COPY package*.json ./
+# The bot launches full Chrome, never chrome-headless-shell, so skip that download
+ENV PUPPETEER_CHROME_HEADLESS_SHELL_SKIP_DOWNLOAD=true
 RUN npm ci --only=production
+
+# Download the Chrome for Testing build pinned by the installed Puppeteer
+# (so package-lock.json decides the Chrome version) and install the system
+# libraries it needs. This is Puppeteer's documented Docker approach. The
+# explicit step fails the build if the download fails, unlike the postinstall.
+# --install-deps runs `apt-get satisfy`, which needs fresh package lists.
+RUN apt-get update \
+    && npx puppeteer browsers install chrome --install-deps \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy application code
 COPY . .

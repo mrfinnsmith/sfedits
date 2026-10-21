@@ -1,0 +1,73 @@
+# Test Chrome the way production runs it: build the bot and admin images, then
+# take a real screenshot inside each with the same init and memory limit as
+# docker-compose.yml. Meant to be a required check, so it has no paths filter.
+# When a Dependabot update fails it, open an issue; the bot stays on its
+# current Chrome until that is resolved. Public repo, so runner minutes are
+# free; a run takes roughly 5 to 8 minutes.
+name: Chrome test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: chrome-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshot-test:
+    name: Chrome screenshot test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build bot image
+        run: docker build -t sfedits-bot .
+
+      - name: Build admin image
+        run: docker build -f admin/Dockerfile -t sfedits-admin .
+
+      - name: Screenshot in bot image
+        run: >
+          docker run --rm --init --memory=256m
+          -v "$PWD/scripts/screenshot-check.js:/opt/sfedits/screenshot-check.js:ro"
+          sfedits-bot node screenshot-check.js
+
+      - name: Screenshot in admin image
+        run: >
+          docker run --rm --init --memory=256m
+          -v "$PWD/scripts/screenshot-check.js:/opt/sfedits/screenshot-check.js:ro"
+          sfedits-admin node screenshot-check.js
+
+      - name: Open issue for failed Dependabot update
+        if: failure() && github.event.pull_request.user.login == 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Dependabot re-runs this on every rebase; open one issue per PR.
+          TITLE="Chrome update failed screenshot test (PR $PR_NUMBER): $PR_TITLE"
+          if gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 200 \
+              --json title --jq '.[].title' | grep -Fq "(PR $PR_NUMBER):"; then
+            echo "An open issue already exists for PR $PR_NUMBER"
+            exit 0
+          fi
+          {
+            echo "The Chrome screenshot test failed on a Dependabot update."
+            echo
+            echo "- Pull request: $PR_URL"
+            echo "- Failed run: $RUN_URL"
+            echo
+            echo "The bot stays on its current Chrome until this is resolved. Do not merge the pull request while the Chrome screenshot test is failing."
+          } > issue-body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "$TITLE" \
+            --body-file issue-body.md
