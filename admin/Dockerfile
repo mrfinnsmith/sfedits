@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fonts-noto-core \
     xvfb \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Use root package.json (same as bot)

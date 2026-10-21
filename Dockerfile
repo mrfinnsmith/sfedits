@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     fonts-liberation \
     fonts-noto-core \
     xvfb \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files and install dependencies
