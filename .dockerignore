@@ -1,0 +1,22 @@
+# Keep secrets, runtime state and local tooling out of image build contexts.
+# config.json, data/ and drafts/ are bind-mounted at runtime
+# by docker-compose, so the images never need their own copies.
+.git
+.env
+config.json
+config.json.bak
+nohup.out
+**/*.log
+data/
+drafts/
+**/node_modules
+.claude/
+CLAUDE.md
+.gemini/
+GEMINI.md
+REFACTORING_INVESTIGATION.md
+.superpowers/
+docs/pii-screening/
+docs/superpowers/
+*.png
+__pycache__/
