@@ -252,15 +252,17 @@ describe('posting flow', function() {
       // Use proxyquire to inject mocked dependencies
       const pageWatch = proxyquire('../page-watch', {
         './lib/screenshot': {
-          takeScreenshot: async () => {
+          takeScreenshotWithReason: async () => {
             screenshotCalled = true
-            return fakeScreenshotPath
+            return { file: fakeScreenshotPath, reason: null }
           }
         },
         './lib/geolocation': {
           enrichIPsInText: async (text) => text, // Pass through without enrichment
           initializeReader: async () => null
-        }
+        },
+        // Keep tests out of the real data/edit-outcomes.jsonl
+        './lib/edit-outcomes': { recordOutcome: () => {} }
       })
 
       // Mock the Wikipedia diff page fetch (used for page verification)
@@ -352,15 +354,17 @@ describe('posting flow', function() {
 
       const pageWatch = proxyquire('../page-watch', {
         './lib/screenshot': {
-          takeScreenshot: async () => {
+          takeScreenshotWithReason: async () => {
             screenshotCalled = true
-            return fakeScreenshotPath
+            return { file: fakeScreenshotPath, reason: null }
           }
         },
         './lib/geolocation': {
           enrichIPsInText: async (text) => text,
           initializeReader: async () => null
-        }
+        },
+        // Keep tests out of the real data/edit-outcomes.jsonl
+        './lib/edit-outcomes': { recordOutcome: () => {} }
       })
 
       // The diff URL resolves to a DIFFERENT page than edit.page claims -

@@ -42,6 +42,7 @@
  */
 
 const net = require('net');
+const { revisionIdFromDiffUrl: revidFromDiffUrl } = require('../lib/wiki-url');
 
 // Wikimedia asks API clients to identify themselves:
 // https://meta.wikimedia.org/wiki/User-Agent_policy
@@ -77,38 +78,6 @@ function isIpAddress(name) {
  */
 function isAnonymousName(name) {
   return isIpAddress(name) || (typeof name === 'string' && TEMPORARY_ACCOUNT_PATTERN.test(name));
-}
-
-/**
- * Revision id from a diff URL the bot wrote. Handles:
- *   https://en.wikipedia.org/w/index.php?diff=1372098397&oldid=1372098328   -> 1372098397
- *   https://en.wikipedia.org/w/index.php?title=Cat&diff=123&oldid=456       -> 123
- *   https://en.wikipedia.org/w/index.php?diff=prev&oldid=123                -> 123
- *   https://en.wikipedia.org/w/index.php?oldid=123&rcid=456  (new page)     -> 123
- *   https://en.wikipedia.org/wiki/Special:Diff/123                           -> 123
- *   https://en.wikipedia.org/diff/123                                        -> 123
- * Returns null when no revision id can be found.
- */
-function revidFromDiffUrl(diffUrl) {
-  let url;
-  try {
-    url = new URL(diffUrl);
-  } catch {
-    return null;
-  }
-
-  const isNumber = v => typeof v === 'string' && /^\d+$/.test(v);
-  const diff = url.searchParams.get('diff');
-  const oldid = url.searchParams.get('oldid');
-
-  if (isNumber(diff)) return Number(diff);
-  // diff=prev (or no diff at all) means the revision shown is oldid itself.
-  if ((diff === null || diff === 'prev') && isNumber(oldid)) return Number(oldid);
-
-  const pathMatch = decodeURIComponent(url.pathname).match(/\/(?:wiki\/Special:Diff|diff)\/(?:\d+\/)?(\d+)$/);
-  if (pathMatch) return Number(pathMatch[1]);
-
-  return null;
 }
 
 /**
