@@ -23,6 +23,7 @@ describe('edit outcome recording through sendStatus', function() {
 
   let fakeScreenshotPath
   let screenshotResult
+  let screenshotReason
   let dmCalls
   let outcomes
   let geminiVerdict
@@ -88,7 +89,10 @@ describe('edit outcome recording through sendStatus', function() {
 
   function load(extraStubs = {}) {
     return proxyquire('../page-watch', Object.assign({
-      './lib/screenshot': { takeScreenshot: async () => screenshotResult },
+      './lib/screenshot': {
+        takeScreenshot: async () => screenshotResult,
+        takeScreenshotWithReason: async () => ({ file: screenshotResult, reason: screenshotReason })
+      },
       './lib/geolocation': {
         enrichIPsInText: async (text) => text,
         initializeReader: async () => null
@@ -112,6 +116,7 @@ describe('edit outcome recording through sendStatus', function() {
     clock = sinon.useFakeTimers({ toFake: ['setTimeout'] })
     fakeScreenshotPath = path.join(__dirname, 'fake-failure-screenshot.png')
     screenshotResult = null
+    screenshotReason = null
     dmCalls = []
     outcomes = []
     geminiVerdict = () => 'confirmed'
@@ -142,7 +147,15 @@ describe('edit outcome recording through sendStatus', function() {
     await run(fakeAccount, 'Test_Article')
     assert.lengthOf(outcomes, 1)
     assert.equal(outcomes[0].outcome, 'screenshot_failed')
-    assert.equal(outcomes[0].detail, 'Failed to capture screenshot')
+    assert.equal(outcomes[0].detail, 'unknown reason')
+  })
+
+  it('records the real screenshot failure reason as the outcome detail and posts nothing', async function() {
+    screenshotResult = null
+    screenshotReason = 'Navigation timeout of 30000 ms exceeded'
+    await run(fakeAccount, 'Test_Article')
+    assert.deepEqual(outcomes, [{ url: fakeEdit.url, outcome: 'screenshot_failed', detail: 'Navigation timeout of 30000 ms exceeded' }])
+    assert.isTrue(nock.isDone() || nock.pendingMocks().length === 0)
   })
 
   it('records post_failed, not posted, when Bluesky succeeds and Mastodon fails', async function() {

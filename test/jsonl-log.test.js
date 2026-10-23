@@ -3,6 +3,7 @@ const { assert } = require('chai')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const sinon = require('sinon')
 const { appendJsonl, readJsonl } = require('../lib/jsonl-log')
 
 describe('jsonl-log', function() {
@@ -14,6 +15,7 @@ describe('jsonl-log', function() {
   })
 
   afterEach(function() {
+    sinon.restore()
     fs.rmSync(dir, { recursive: true, force: true })
   })
 
@@ -52,6 +54,21 @@ describe('jsonl-log', function() {
     it('throws when the file cannot be written', function() {
       const bad = path.join(dir, 'missing-dir', 'log.jsonl')
       assert.throws(() => appendJsonl(bad, { n: 1 }))
+    })
+
+    it('still appends the entry when the trim fails', function() {
+      fs.writeFileSync(file, '{"i":0}\n{"i":1}\n{"i":2}\n{"i":3}\n')
+      const size = fs.statSync(file).size
+      sinon.stub(fs, 'renameSync').throws(new Error('rename blocked'))
+      const errorStub = sinon.stub(console, 'error')
+
+      appendJsonl(file, { i: 4 }, size)
+
+      const lines = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean)
+      assert.deepEqual(JSON.parse(lines[lines.length - 1]), { i: 4 })
+      assert.isTrue(errorStub.called)
+      assert.include(errorStub.firstCall.args[0], 'trim of')
+      assert.include(errorStub.firstCall.args[0], 'rename blocked')
     })
   })
 

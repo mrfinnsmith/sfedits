@@ -117,6 +117,25 @@ describe('missed-edits', function() {
       assert.match(msg, /^sfedits: 1 watched edit not posted/)
       assert.include(msg, 'Page 1 (en): bot never handled it\nhttps://')
     })
+    it('appends the detail after the reason text when present', function() {
+      const msg = m.buildAlertMessage([Object.assign(edit(1), { reason: 'screenshot_failed', detail: 'Diff table element not found' })], 1000)
+      assert.include(msg, 'Page 1 (en): screenshot failed: Diff table element not found\nhttps://')
+    })
+    it('leaves the entry unchanged when detail is null or empty', function() {
+      for (const detail of [null, '', '   ']) {
+        const msg = m.buildAlertMessage([Object.assign(edit(1), { detail })], 1000)
+        assert.include(msg, 'Page 1 (en): bot never handled it\nhttps://')
+      }
+    })
+    it('truncates a long detail to 120 characters ending in ...', function() {
+      const msg = m.buildAlertMessage([Object.assign(edit(1), { detail: 'x'.repeat(300) })], 1000)
+      assert.include(msg, `: ${'x'.repeat(117)}...\nhttps://`)
+      assert.notInclude(msg, 'x'.repeat(118))
+    })
+    it('collapses whitespace and newlines in detail', function() {
+      const msg = m.buildAlertMessage([Object.assign(edit(1), { detail: 'line one\n\n  line   two\tend' })], 1000)
+      assert.include(msg, ': line one line two end\nhttps://')
+    })
     it('plural header and all fit with no footer', function() {
       const msg = m.buildAlertMessage([edit(1), edit(2)], 1000)
       assert.match(msg, /^sfedits: 2 watched edits not posted/)

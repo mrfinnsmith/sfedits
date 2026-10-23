@@ -7,7 +7,7 @@ const Mustache = require('mustache')
 const { WikiChanges, channelForLang } = require('./lib/wiki-changes')
 const { saveDraft } = require('./lib/draft-manager')
 const { enrichIPsInText, initializeReader } = require('./lib/geolocation')
-const { takeScreenshot } = require('./lib/screenshot')
+const { takeScreenshotWithReason } = require('./lib/screenshot')
 const { buildFacets } = require('./lib/bluesky-utils')
 const bluesky = require('./lib/bluesky-platform')
 const mastodon = require('./lib/mastodon-platform')
@@ -288,11 +288,12 @@ async function sendStatus(account, statusData, edit) {
 
       // Wait for Wikipedia diff table to fully render
       await new Promise(r => setTimeout(r, 2000));
-      const screenshot = await takeScreenshot(edit.url)
+      const { file: screenshot, reason: screenshotReason } = await takeScreenshotWithReason(edit.url)
 
       if (!screenshot) {
-        const screenshotError = new Error('Failed to capture screenshot')
+        const screenshotError = new Error(`Failed to capture screenshot: ${screenshotReason || 'unknown reason'}`)
         screenshotError.outcome = 'screenshot_failed'
+        screenshotError.detail = screenshotReason || 'unknown reason'
         throw screenshotError
       }
 
@@ -340,7 +341,7 @@ async function sendStatus(account, statusData, edit) {
     }
   } catch (error) {
     console.error('Posting failed:', error)
-    recordOutcome(edit, error.outcome || 'post_failed', error.message)
+    recordOutcome(edit, error.outcome || 'post_failed', error.detail || error.message)
   }
 }
 

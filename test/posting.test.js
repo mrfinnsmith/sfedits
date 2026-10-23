@@ -252,9 +252,9 @@ describe('posting flow', function() {
       // Use proxyquire to inject mocked dependencies
       const pageWatch = proxyquire('../page-watch', {
         './lib/screenshot': {
-          takeScreenshot: async () => {
+          takeScreenshotWithReason: async () => {
             screenshotCalled = true
-            return fakeScreenshotPath
+            return { file: fakeScreenshotPath, reason: null }
           }
         },
         './lib/geolocation': {
@@ -354,9 +354,9 @@ describe('posting flow', function() {
 
       const pageWatch = proxyquire('../page-watch', {
         './lib/screenshot': {
-          takeScreenshot: async () => {
+          takeScreenshotWithReason: async () => {
             screenshotCalled = true
-            return fakeScreenshotPath
+            return { file: fakeScreenshotPath, reason: null }
           }
         },
         './lib/geolocation': {
