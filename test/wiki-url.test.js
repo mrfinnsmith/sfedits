@@ -32,6 +32,12 @@ describe('revisionIdFromDiffUrl', function() {
     assert.isNull(revisionIdFromDiffUrl('https://en.wikipedia.org/w/index.php?oldid=12x'))
   })
 
+  it('reads path forms backfilled from the Bluesky feed', function() {
+    assert.strictEqual(revisionIdFromDiffUrl('https://en.wikipedia.org/wiki/Special:Diff/123'), 123)
+    assert.strictEqual(revisionIdFromDiffUrl('https://en.wikipedia.org/wiki/Special:Diff/122/123'), 123)
+    assert.strictEqual(revisionIdFromDiffUrl('https://en.wikipedia.org/diff/123'), 123)
+  })
+
   it('returns null for a malformed URL', function() {
     assert.isNull(revisionIdFromDiffUrl('not a url'))
     assert.isNull(revisionIdFromDiffUrl(undefined))
