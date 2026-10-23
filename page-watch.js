@@ -15,6 +15,7 @@ const { verifyPIIWithGemini } = require('./lib/gemini-pii-check')
 const { fetchDiffHtml, verifyDiffPage } = require('./lib/diff-page')
 const { getArticleUrl, getUserContributionsUrl, langFromEditUrl } = require('./lib/wiki-url')
 const { recordEdit } = require('./lib/edit-log')
+const { recordOutcome } = require('./lib/edit-outcomes')
 const { sendBlueskyDm, sendMastodonDm } = require('./lib/dm-alert')
 
 const { getConfig, countWatchlist } = require('./lib/config')
@@ -166,28 +167,6 @@ async function sendMastodonAlert(account, edit, statusData, _piiResult) {
   await sendMastodonDm(account, `PII: ${statusData.text}`)
 }
 
-// DM the owner once when posting has failed this many times in a row.
-const POST_FAILURE_ALERT_THRESHOLD = 2
-let consecutiveFailures = 0
-
-/**
- * Count a failed post and DM the owner when the streak reaches the threshold.
- * Alerts exactly once per streak; a successful post resets it. The message
- * carries only the error text, never the edit. Never throws.
- */
-async function recordPostFailure(account, error) {
-  consecutiveFailures++
-  if (consecutiveFailures !== POST_FAILURE_ALERT_THRESHOLD) return
-
-  try {
-    const alertText = `sfedits: ${POST_FAILURE_ALERT_THRESHOLD} posts in a row failed. Last error: ${error && error.message}`
-    await sendBlueskyDm(account, alertText)
-    await sendMastodonDm(account, alertText)
-  } catch (alertError) {
-    console.error('Failure alert failed:', alertError.message)
-  }
-}
-
 /**
  * Screen edit for PII before posting
  */
@@ -203,7 +182,7 @@ async function screenForPII(account, edit, statusData, diffHtml) {
 
     if (!diffText) {
       console.error('⚠ Could not extract diff text - blocking as precaution')
-      return { safe: false, reason: 'Could not extract diff text' }
+      return { safe: false, reason: 'Could not extract diff text', outcome: 'no_diff_text' }
     }
 
     // Get blocked entity types from config
@@ -248,14 +227,14 @@ async function screenForPII(account, edit, statusData, diffHtml) {
       await sendBlueskyAlert(account, edit, statusData, piiResult)
       await sendMastodonAlert(account, edit, statusData, piiResult)
 
-      return { safe: false, reason: 'PII detected', piiResult }
+      return { safe: false, reason: 'PII detected', piiResult, outcome: 'pii_blocked' }
     }
 
     return { safe: true }
   } catch (error) {
     // Fail-safe: block on any error
     console.error('⚠ PII screening error - blocking as precaution:', error.message)
-    return { safe: false, reason: 'Screening error' }
+    return { safe: false, reason: 'Screening error', outcome: 'screening_error', detail: error.message }
   }
 }
 
@@ -291,6 +270,7 @@ async function sendStatus(account, statusData, edit) {
       const verification = verifyDiffPage(diffHtml, edit.page)
       if (!verification.match) {
         console.error(`Post blocked: diff is for "${verification.actualPage}", not "${edit.page}"`)
+        recordOutcome(edit, 'wrong_page', `diff is for "${verification.actualPage}"`)
         return
       }
 
@@ -299,6 +279,7 @@ async function sendStatus(account, statusData, edit) {
 
       if (!screeningResult.safe) {
         console.error(`Post blocked: ${screeningResult.reason}`)
+        recordOutcome(edit, screeningResult.outcome, screeningResult.detail || screeningResult.reason)
         return
       }
 
@@ -310,7 +291,9 @@ async function sendStatus(account, statusData, edit) {
       const screenshot = await takeScreenshot(edit.url)
 
       if (!screenshot) {
-        throw new Error('Failed to capture screenshot')
+        const screenshotError = new Error('Failed to capture screenshot')
+        screenshotError.outcome = 'screenshot_failed'
+        throw screenshotError
       }
 
       try {
@@ -343,7 +326,8 @@ async function sendStatus(account, statusData, edit) {
         }
 
         writeHeartbeat('post')
-        consecutiveFailures = 0
+        // Only after every configured platform succeeded
+        recordOutcome(edit, 'posted')
 
         // Record only what actually went out. recordEdit never throws.
         await recordEdit(edit)
@@ -356,7 +340,7 @@ async function sendStatus(account, statusData, edit) {
     }
   } catch (error) {
     console.error('Posting failed:', error)
-    await recordPostFailure(account, error)
+    recordOutcome(edit, error.outcome || 'post_failed', error.message)
   }
 }
 
